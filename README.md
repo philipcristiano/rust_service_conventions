@@ -1,2 +1,10 @@
 # rust-service-conventions
-Setup service conventions
+
+Conventions for Rust services
+
+## Tracing (and logging)
+
+```rust
+
+service_conventions::tracing::setup();
+```

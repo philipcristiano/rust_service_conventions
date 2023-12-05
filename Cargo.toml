@@ -1,0 +1,16 @@
+[package]
+name = "rust_service_conventions"
+version = "0.0.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+opentelemetry = { version = "0.21.0", features = [] }
+opentelemetry-otlp = { version = "0.14.0", features = ["grpc-tonic", "http-proto"] }
+opentelemetry-semantic-conventions = "0.13.0"
+opentelemetry_sdk = { version = "0.21.1", features = ["rt-tokio"] }
+
+tracing-subscriber = { version = "0.3.18", features = ["fmt", "json", "env-filter", "std", "registry"] }
+tracing = "0.1.40"
+tracing-opentelemetry = "0.22.0"

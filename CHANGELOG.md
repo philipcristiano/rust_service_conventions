@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.2...v0.0.3) - 2024-03-09
+
+### Other
+- Add missing deps for oidc
+
 ## [0.0.2](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.1...v0.0.2) - 2024-03-09
 
 ### Added

@@ -8,9 +8,8 @@ use openidconnect::{
     RedirectUrl, Scope, UserInfoClaims,
 };
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-use openidconnect::reqwest::async_http_client;
-use url::Url;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -18,10 +17,12 @@ use axum::{
     routing::get,
     Router,
 };
-use tower_cookies::{Cookie, CookieManagerLayer, Cookies, Key};
+use openidconnect::reqwest::async_http_client;
+use tower_cookies::{Cookie, Cookies, Key};
+use url::Url;
 
-use std::error::Error;
 use maud::{html, DOCTYPE};
+use std::error::Error;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthConfig {
@@ -29,6 +30,58 @@ pub struct AuthConfig {
     redirect_url: RedirectUrl,
     client_id: String,
     client_secret: ClientSecret,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct OIDCUser {
+    pub id: String,
+    pub name: Option<String>,
+    pub email: Option<email_address::EmailAddress>,
+    pub group_claims: Vec<String>,
+}
+impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
+    fn from(uic: UserInfoClaims<GroupClaims, CoreGenderClaim>) -> Self {
+        OIDCUser {
+            id: uic.standard_claims().subject().as_str().into(),
+            name: uic_name_to_name(uic.standard_claims().name()),
+            email: uic_email_to_email(uic.standard_claims().email()),
+            group_claims: vec![],
+        }
+    }
+}
+fn uic_email_to_email(uice: Option<&openidconnect::EndUserEmail> ) -> Option<email_address::EmailAddress> {
+    email_address::EmailAddress::from_str(uice?).ok()
+}
+fn uic_name_to_name(uicn: Option<&openidconnect::LocalizedClaim<openidconnect::EndUserName>> ) -> Option<String> {
+    for (language_tag, i) in uicn?.iter() {
+        return Some(i.as_str().to_string())
+    }
+    None
+}
+
+use async_trait::async_trait;
+use http::request::Parts;
+use axum_core::extract::FromRequestParts;
+const USER_COOKIE_NAME: &str = "oidc_user";
+#[async_trait]
+impl<S> FromRequestParts<S> for OIDCUser
+where
+    S: Send + Sync,
+{
+    type Rejection = (http::StatusCode, &'static str);
+
+    async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let cookies = Cookies::from_request_parts(req, state).await?;
+
+        let cookie_val = cookies.get(USER_COOKIE_NAME).unwrap();
+        let oidc_user = serde_json::from_str(&cookie_val.to_string());
+
+        match oidc_user {
+            Err(e) => Err((StatusCode::BAD_REQUEST, "User Cookie problem")),
+            Ok(ou) => Ok(ou),
+        }
+
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -49,6 +102,7 @@ struct GroupClaims {
     scopes: Vec<String>,
     groups: Vec<String>,
 }
+
 impl AdditionalClaims for GroupClaims {}
 
 // Use OpenID Connect Discovery to fetch the provider metadata.
@@ -116,7 +170,7 @@ pub async fn next(
     client: CoreClient,
     auth_verify: AuthVerify,
     auth_code: String,
-) -> anyhow::Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>> {
+) -> anyhow::Result<OIDCUser> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -175,20 +229,17 @@ pub async fn next(
 
     // See the OAuth2TokenResponse trait for a listing of other available fields such as
     // access_token() and refresh_token().
-    return Ok(claims.clone());
+    return Ok(userinfo_claims.into());
 }
-
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
     let my_key: &[u8] = &[0; 64]; // Your real key must be cryptographically random
     KEY.set(Key::from(my_key)).ok();
     let r = Router::new()
-        .route("/login",
-            get(oidc_login).with_state(auth_config.clone()))
+        .route("/login", get(oidc_login).with_state(auth_config.clone()))
         .route("/login_auth", get(login_auth))
         .with_state(auth_config.clone());
     r
-
 }
 const COOKIE_NAME: &str = "auth_flow";
 #[tracing::instrument]
@@ -261,22 +312,17 @@ async fn login_auth(
     let cookie_str = cookie.value();
     let auth_verify: AuthVerify = serde_json::from_str(&cookie_str)?;
 
-    tracing::error!("CSRF {:?} {:?} {:?}", cookie_str, auth_verify.csrf_token, oidc_auth_code.state);
     if auth_verify.csrf_token.secret() != &oidc_auth_code.state {
         tracing::error!("CSRF State doesn't match");
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
 
-    let claims = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+    let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
 
     let resp = html! {
         (DOCTYPE)
-        p { "User " (claims.subject().as_str()) " has authenticated successfully"}
-        p { "Email: " (
-                        claims
-                        .email()
-                        .map(|email| email.as_str())
-                        .unwrap_or("<not provided>")) }
+        p { "User " (oidc_user.name.unwrap_or("".to_string())) " has authenticated successfully"}
+        p { "Email: " (oidc_user.email.unwrap_or(email_address::EmailAddress::from_str("example@example.com").unwrap())) }
         a href="/oidc/login" { "Restart" }
     };
 

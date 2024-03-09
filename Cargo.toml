@@ -1,6 +1,6 @@
 [package]
 name = "service_conventions"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 description = "Conventions for services"
 license = "Apache-2.0"
@@ -24,11 +24,17 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = {version = "1.0", optional = true}
 maud = { version="0.26.0", features = ["axum"], optional = true }
 axum = { version = "0.7.4", optional = true}
-tower-cookies = { version = "0.10.0", features = ["signed", "private"], optional = true}
+tower-cookies = { version = "0.10.0", features = ["signed", "private", "axum-core"], optional = true}
 
 url = { version = "2.5.0", optional = true }
+email_address = {version = "0.2.4", optional = true}
+http = {version = "1.1.0", optional = true}
+axum-core =   {version = "0.4", optional = true}
+async-trait = {version = "0.1", optional = true}
 
 [features]
+all = ["tracing", "oidc"]
 default = ["tracing"]
 tracing = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry-semantic-conventions", "dep:tracing-subscriber", "dep:tracing", "dep:tracing-opentelemetry", "dep:opentelemetry_sdk"]
-oidc = ["dep:anyhow", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url"]
+oidc = ["dep:anyhow", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url", "dep:email_address", "dep:http", "dep:async-trait", "dep:axum-core"]
+

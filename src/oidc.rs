@@ -11,8 +11,17 @@ use serde::{Deserialize, Serialize};
 
 use openidconnect::reqwest::async_http_client;
 use url::Url;
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Redirect, Response},
+    routing::get,
+    Router,
+};
+use tower_cookies::{Cookie, CookieManagerLayer, Cookies, Key};
 
 use std::error::Error;
+use maud::{html, DOCTYPE};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthConfig {
@@ -167,4 +176,109 @@ pub async fn next(
     // See the OAuth2TokenResponse trait for a listing of other available fields such as
     // access_token() and refresh_token().
     return Ok(claims.clone());
+}
+
+
+pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
+    let my_key: &[u8] = &[0; 64]; // Your real key must be cryptographically random
+    KEY.set(Key::from(my_key)).ok();
+    let r = Router::new()
+        .route("/login",
+            get(oidc_login).with_state(auth_config.clone()))
+        .route("/login_auth", get(login_auth))
+        .with_state(auth_config.clone());
+    r
+
+}
+const COOKIE_NAME: &str = "auth_flow";
+#[tracing::instrument]
+async fn oidc_login(State(config): State<AuthConfig>, cookies: Cookies) -> impl IntoResponse {
+    let auth_client = construct_client(config.clone()).await.unwrap();
+    let auth_content = get_auth_url(auth_client).await;
+    let key = KEY.get().unwrap();
+    let private_cookies = cookies.private(key);
+    let cookie_val = serde_json::to_string(&auth_content.verify).unwrap();
+    private_cookies.add(Cookie::new(COOKIE_NAME, cookie_val));
+
+    Redirect::temporary(&auth_content.redirect_url.to_string())
+}
+
+#[derive(Debug, Deserialize)]
+struct OIDCAuthCode {
+    code: String,
+    state: String,
+}
+
+#[derive(Debug)]
+struct AuthError(anyhow::Error);
+
+// Tell axum how to convert `AppError` into a response.
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        tracing::info!("Auth error {:?}", self);
+        let resp = html! {
+        (DOCTYPE)
+            p { "You are not authorized"}
+            a href="/oidc/login" { "Restart" }
+        };
+        (StatusCode::UNAUTHORIZED, resp).into_response()
+    }
+}
+
+// impl From<serde_json::Error> for AuthError {
+//     fn from(_err: serde_json::Error) -> AuthError {
+//         AuthError(anyhow::anyhow!("Json serialization error"))
+//     }
+// }
+// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
+// `Result<_, AppError>`. That way you don't need to do that manually.
+impl<E> From<E> for AuthError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
+use once_cell::sync::OnceCell;
+static KEY: OnceCell<Key> = OnceCell::new();
+
+#[tracing::instrument]
+async fn login_auth(
+    State(config): State<AuthConfig>,
+    cookies: Cookies,
+    Query(oidc_auth_code): Query<OIDCAuthCode>,
+) -> Result<Response, AuthError> {
+    let auth_client = construct_client(config.clone()).await.unwrap();
+    let key = KEY.get().unwrap();
+    let private_cookies = cookies.private(key);
+    let cookie = match private_cookies.get(COOKIE_NAME) {
+        Some(c) => c,
+        _ => return Ok(StatusCode::UNAUTHORIZED.into_response()),
+    };
+
+    let cookie_str = cookie.value();
+    let auth_verify: AuthVerify = serde_json::from_str(&cookie_str)?;
+
+    tracing::error!("CSRF {:?} {:?} {:?}", cookie_str, auth_verify.csrf_token, oidc_auth_code.state);
+    if auth_verify.csrf_token.secret() != &oidc_auth_code.state {
+        tracing::error!("CSRF State doesn't match");
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    }
+
+    let claims = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+
+    let resp = html! {
+        (DOCTYPE)
+        p { "User " (claims.subject().as_str()) " has authenticated successfully"}
+        p { "Email: " (
+                        claims
+                        .email()
+                        .map(|email| email.as_str())
+                        .unwrap_or("<not provided>")) }
+        a href="/oidc/login" { "Restart" }
+    };
+
+    Ok(resp.into_response())
 }

@@ -17,6 +17,7 @@ tracing-subscriber = { version = "0.3.18", features = ["fmt", "json", "env-filte
 tracing = { version = "0.1.40", optional = true}
 tracing-opentelemetry = { version = "0.23.0", optional = true}
 
+anyhow = {version = "1", optional = true}
 once_cell = { version = "1.19.0", optional = true}
 openidconnect = {version = "3.4.0", optional = true}
 serde = { version = "1.0", features = ["derive"], optional = true }
@@ -25,7 +26,9 @@ maud = { version="0.26.0", features = ["axum"], optional = true }
 axum = { version = "0.7.4", optional = true}
 tower-cookies = { version = "0.10.0", features = ["signed", "private"], optional = true}
 
+url = { version = "2.5.0", optional = true }
+
 [features]
 default = ["tracing"]
 tracing = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry-semantic-conventions", "dep:tracing-subscriber", "dep:tracing", "dep:tracing-opentelemetry", "dep:opentelemetry_sdk"]
-oidc = ["dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies"]
+oidc = ["dep:anyhow", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url"]

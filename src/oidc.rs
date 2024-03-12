@@ -32,7 +32,7 @@ pub struct AuthConfig {
     client_secret: ClientSecret,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct OIDCUser {
     pub id: String,
     pub name: Option<String>,
@@ -72,10 +72,15 @@ where
 
     async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let cookies = Cookies::from_request_parts(req, state).await?;
+        let key = KEY.get().unwrap();
+        let private_cookies = cookies.private(key);
 
-        let cookie_val = cookies.get(USER_COOKIE_NAME).unwrap();
-        let oidc_user = serde_json::from_str(&cookie_val.to_string());
+        let cookie_val = private_cookies.get(USER_COOKIE_NAME).unwrap();
 
+        let oidc_user = serde_json::from_str(&cookie_val.value());
+
+        println!("Cookie user {:?}", cookie_val);
+        println!(" user {:?}", oidc_user);
         match oidc_user {
             Err(e) => Err((StatusCode::BAD_REQUEST, "User Cookie problem")),
             Ok(ou) => Ok(ou),
@@ -318,6 +323,10 @@ async fn login_auth(
     }
 
     let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+    let cookie_val_user = serde_json::to_string(&oidc_user).unwrap();
+    let mut user_cookie = Cookie::new(USER_COOKIE_NAME, cookie_val_user);
+    user_cookie.set_path("/");
+    private_cookies.add(user_cookie);
 
     let resp = html! {
         (DOCTYPE)

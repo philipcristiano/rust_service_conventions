@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.4...v0.0.5) - 2024-03-12
+
+### Other
+- redirect after auth
+- oidc-user
+- Merge pull request [#16](https://github.com/philipcristiano/rust_service_conventions/pull/16) from philipcristiano/release-plz-2024-03-09T21-41-29Z
+
 ## [0.0.4](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.3...v0.0.4) - 2024-03-09
 
 ### Other

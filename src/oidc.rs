@@ -26,10 +26,11 @@ use std::error::Error;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthConfig {
-    issuer_url: Url,
-    redirect_url: RedirectUrl,
-    client_id: String,
-    client_secret: ClientSecret,
+    pub issuer_url: Url,
+    pub redirect_url: RedirectUrl,
+    pub client_id: String,
+    pub client_secret: ClientSecret,
+    pub post_auth_path: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -49,19 +50,23 @@ impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
         }
     }
 }
-fn uic_email_to_email(uice: Option<&openidconnect::EndUserEmail> ) -> Option<email_address::EmailAddress> {
+fn uic_email_to_email(
+    uice: Option<&openidconnect::EndUserEmail>,
+) -> Option<email_address::EmailAddress> {
     email_address::EmailAddress::from_str(uice?).ok()
 }
-fn uic_name_to_name(uicn: Option<&openidconnect::LocalizedClaim<openidconnect::EndUserName>> ) -> Option<String> {
+fn uic_name_to_name(
+    uicn: Option<&openidconnect::LocalizedClaim<openidconnect::EndUserName>>,
+) -> Option<String> {
     for (language_tag, i) in uicn?.iter() {
-        return Some(i.as_str().to_string())
+        return Some(i.as_str().to_string());
     }
     None
 }
 
 use async_trait::async_trait;
-use http::request::Parts;
 use axum_core::extract::FromRequestParts;
+use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
 #[async_trait]
 impl<S> FromRequestParts<S> for OIDCUser
@@ -75,17 +80,19 @@ where
         let key = KEY.get().unwrap();
         let private_cookies = cookies.private(key);
 
-        let cookie_val = private_cookies.get(USER_COOKIE_NAME).unwrap();
+        let cookie = match private_cookies.get(USER_COOKIE_NAME) {
+            Some(c) => c,
+            _ => return Err((StatusCode::BAD_REQUEST, "User Cookie problem a")),
+        };
+        let oidc_user = serde_json::from_str(&cookie.value());
 
-        let oidc_user = serde_json::from_str(&cookie_val.value());
-
-        println!("Cookie user {:?}", cookie_val);
-        println!(" user {:?}", oidc_user);
         match oidc_user {
-            Err(e) => Err((StatusCode::BAD_REQUEST, "User Cookie problem")),
+            Err(e) => {
+                tracing::error!("User Cookie problem {:?}", e);
+                Err((StatusCode::BAD_REQUEST, "User Cookie problem"))
+            }
             Ok(ou) => Ok(ou),
         }
-
     }
 }
 
@@ -206,14 +213,6 @@ pub async fn next(
 
     // The authenticated user's identity is now available. See the IdTokenClaims struct for a
     // complete listing of the available claims.
-    println!(
-        "User {} with e-mail address {} has authenticated successfully",
-        claims.subject().as_str(),
-        claims
-            .email()
-            .map(|email| email.as_str())
-            .unwrap_or("<not provided>"),
-    );
     // The user_info request uses the AccessToken returned in the token response. To parse custom
     // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
     // CoreUserInfoClaims type alias.
@@ -223,8 +222,6 @@ pub async fn next(
         .request_async(async_http_client)
         .await
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
-
-    println!("Userinfo: {:?},", userinfo_claims);
 
     // If available, we can use the UserInfo endpoint to request additional information.
 
@@ -273,6 +270,7 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         tracing::info!("Auth error {:?}", self);
         let resp = html! {
+
         (DOCTYPE)
             p { "You are not authorized"}
             a href="/oidc/login" { "Restart" }
@@ -281,11 +279,6 @@ impl IntoResponse for AuthError {
     }
 }
 
-// impl From<serde_json::Error> for AuthError {
-//     fn from(_err: serde_json::Error) -> AuthError {
-//         AuthError(anyhow::anyhow!("Json serialization error"))
-//     }
-// }
 // This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
 // `Result<_, AppError>`. That way you don't need to do that manually.
 impl<E> From<E> for AuthError
@@ -328,12 +321,5 @@ async fn login_auth(
     user_cookie.set_path("/");
     private_cookies.add(user_cookie);
 
-    let resp = html! {
-        (DOCTYPE)
-        p { "User " (oidc_user.name.unwrap_or("".to_string())) " has authenticated successfully"}
-        p { "Email: " (oidc_user.email.unwrap_or(email_address::EmailAddress::from_str("example@example.com").unwrap())) }
-        a href="/oidc/login" { "Restart" }
-    };
-
-    Ok(resp.into_response())
+    Ok(Redirect::to(&config.post_auth_path).into_response())
 }

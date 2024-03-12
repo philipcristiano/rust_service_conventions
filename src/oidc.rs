@@ -8,9 +8,8 @@ use openidconnect::{
     RedirectUrl, Scope, UserInfoClaims,
 };
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
-use openidconnect::reqwest::async_http_client;
-use url::Url;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -18,17 +17,83 @@ use axum::{
     routing::get,
     Router,
 };
-use tower_cookies::{Cookie, CookieManagerLayer, Cookies, Key};
+use openidconnect::reqwest::async_http_client;
+use tower_cookies::{Cookie, Cookies, Key};
+use url::Url;
 
-use std::error::Error;
 use maud::{html, DOCTYPE};
+use std::error::Error;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthConfig {
-    issuer_url: Url,
-    redirect_url: RedirectUrl,
-    client_id: String,
-    client_secret: ClientSecret,
+    pub issuer_url: Url,
+    pub redirect_url: RedirectUrl,
+    pub client_id: String,
+    pub client_secret: ClientSecret,
+    pub post_auth_path: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct OIDCUser {
+    pub id: String,
+    pub name: Option<String>,
+    pub email: Option<email_address::EmailAddress>,
+    pub group_claims: Vec<String>,
+}
+impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
+    fn from(uic: UserInfoClaims<GroupClaims, CoreGenderClaim>) -> Self {
+        OIDCUser {
+            id: uic.standard_claims().subject().as_str().into(),
+            name: uic_name_to_name(uic.standard_claims().name()),
+            email: uic_email_to_email(uic.standard_claims().email()),
+            group_claims: vec![],
+        }
+    }
+}
+fn uic_email_to_email(
+    uice: Option<&openidconnect::EndUserEmail>,
+) -> Option<email_address::EmailAddress> {
+    email_address::EmailAddress::from_str(uice?).ok()
+}
+fn uic_name_to_name(
+    uicn: Option<&openidconnect::LocalizedClaim<openidconnect::EndUserName>>,
+) -> Option<String> {
+    for (language_tag, i) in uicn?.iter() {
+        return Some(i.as_str().to_string());
+    }
+    None
+}
+
+use async_trait::async_trait;
+use axum_core::extract::FromRequestParts;
+use http::request::Parts;
+const USER_COOKIE_NAME: &str = "oidc_user";
+#[async_trait]
+impl<S> FromRequestParts<S> for OIDCUser
+where
+    S: Send + Sync,
+{
+    type Rejection = (http::StatusCode, &'static str);
+
+    async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let cookies = Cookies::from_request_parts(req, state).await?;
+        let key = KEY.get().unwrap();
+        let private_cookies = cookies.private(key);
+
+        let cookie = match private_cookies.get(USER_COOKIE_NAME) {
+            Some(c) => c,
+            _ => return Err((StatusCode::BAD_REQUEST, "User Cookie problem a")),
+        };
+        let oidc_user = serde_json::from_str(&cookie.value());
+
+        match oidc_user {
+            Err(e) => {
+                tracing::error!("User Cookie problem {:?}", e);
+                Err((StatusCode::BAD_REQUEST, "User Cookie problem"))
+            }
+            Ok(ou) => Ok(ou),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -49,6 +114,7 @@ struct GroupClaims {
     scopes: Vec<String>,
     groups: Vec<String>,
 }
+
 impl AdditionalClaims for GroupClaims {}
 
 // Use OpenID Connect Discovery to fetch the provider metadata.
@@ -116,7 +182,7 @@ pub async fn next(
     client: CoreClient,
     auth_verify: AuthVerify,
     auth_code: String,
-) -> anyhow::Result<IdTokenClaims<EmptyAdditionalClaims, CoreGenderClaim>> {
+) -> anyhow::Result<OIDCUser> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -147,14 +213,6 @@ pub async fn next(
 
     // The authenticated user's identity is now available. See the IdTokenClaims struct for a
     // complete listing of the available claims.
-    println!(
-        "User {} with e-mail address {} has authenticated successfully",
-        claims.subject().as_str(),
-        claims
-            .email()
-            .map(|email| email.as_str())
-            .unwrap_or("<not provided>"),
-    );
     // The user_info request uses the AccessToken returned in the token response. To parse custom
     // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
     // CoreUserInfoClaims type alias.
@@ -165,8 +223,6 @@ pub async fn next(
         .await
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
 
-    println!("Userinfo: {:?},", userinfo_claims);
-
     // If available, we can use the UserInfo endpoint to request additional information.
 
     // The user_info request uses the AccessToken returned in the token response. To parse custom
@@ -175,20 +231,17 @@ pub async fn next(
 
     // See the OAuth2TokenResponse trait for a listing of other available fields such as
     // access_token() and refresh_token().
-    return Ok(claims.clone());
+    return Ok(userinfo_claims.into());
 }
-
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
     let my_key: &[u8] = &[0; 64]; // Your real key must be cryptographically random
     KEY.set(Key::from(my_key)).ok();
     let r = Router::new()
-        .route("/login",
-            get(oidc_login).with_state(auth_config.clone()))
+        .route("/login", get(oidc_login).with_state(auth_config.clone()))
         .route("/login_auth", get(login_auth))
         .with_state(auth_config.clone());
     r
-
 }
 const COOKIE_NAME: &str = "auth_flow";
 #[tracing::instrument]
@@ -217,6 +270,7 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         tracing::info!("Auth error {:?}", self);
         let resp = html! {
+
         (DOCTYPE)
             p { "You are not authorized"}
             a href="/oidc/login" { "Restart" }
@@ -225,11 +279,6 @@ impl IntoResponse for AuthError {
     }
 }
 
-// impl From<serde_json::Error> for AuthError {
-//     fn from(_err: serde_json::Error) -> AuthError {
-//         AuthError(anyhow::anyhow!("Json serialization error"))
-//     }
-// }
 // This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
 // `Result<_, AppError>`. That way you don't need to do that manually.
 impl<E> From<E> for AuthError
@@ -261,24 +310,16 @@ async fn login_auth(
     let cookie_str = cookie.value();
     let auth_verify: AuthVerify = serde_json::from_str(&cookie_str)?;
 
-    tracing::error!("CSRF {:?} {:?} {:?}", cookie_str, auth_verify.csrf_token, oidc_auth_code.state);
     if auth_verify.csrf_token.secret() != &oidc_auth_code.state {
         tracing::error!("CSRF State doesn't match");
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
 
-    let claims = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+    let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+    let cookie_val_user = serde_json::to_string(&oidc_user).unwrap();
+    let mut user_cookie = Cookie::new(USER_COOKIE_NAME, cookie_val_user);
+    user_cookie.set_path("/");
+    private_cookies.add(user_cookie);
 
-    let resp = html! {
-        (DOCTYPE)
-        p { "User " (claims.subject().as_str()) " has authenticated successfully"}
-        p { "Email: " (
-                        claims
-                        .email()
-                        .map(|email| email.as_str())
-                        .unwrap_or("<not provided>")) }
-        a href="/oidc/login" { "Restart" }
-    };
-
-    Ok(resp.into_response())
+    Ok(Redirect::to(&config.post_auth_path).into_response())
 }

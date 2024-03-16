@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.5...v0.0.6) - 2024-03-16
+
+### Added
+- oidc: Remove state from router setup
+
+### Other
+- Include lint/fixers
+
 ## [0.0.5](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.4...v0.0.5) - 2024-03-12
 
 ### Other

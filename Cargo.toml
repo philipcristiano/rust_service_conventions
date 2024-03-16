@@ -34,7 +34,7 @@ async-trait = {version = "0.1", optional = true}
 
 [features]
 all = ["tracing", "oidc"]
-default = ["tracing"]
+default = ["tracing", "oidc"]
 tracing = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry-semantic-conventions", "dep:tracing-subscriber", "dep:tracing", "dep:tracing-opentelemetry", "dep:opentelemetry_sdk"]
 oidc = ["dep:anyhow", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url", "dep:email_address", "dep:http", "dep:async-trait", "dep:axum-core"]
 

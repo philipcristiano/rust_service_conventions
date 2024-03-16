@@ -238,9 +238,8 @@ pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
     let my_key: &[u8] = &[0; 64]; // Your real key must be cryptographically random
     KEY.set(Key::from(my_key)).ok();
     let r = Router::new()
-        .route("/login", get(oidc_login).with_state(auth_config.clone()))
-        .route("/login_auth", get(login_auth))
-        .with_state(auth_config.clone());
+        .route("/login", get(oidc_login))
+        .route("/login_auth", get(login_auth));
     r
 }
 const COOKIE_NAME: &str = "auth_flow";

@@ -111,7 +111,9 @@ pub struct AuthVerify {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct GroupClaims {
+    #[serde(default)]
     scopes: Vec<String>,
+    #[serde(default)]
     groups: Vec<String>,
 }
 

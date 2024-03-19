@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.6...v0.0.7) - 2024-03-19
+
+### Fixed
+- oidc: Accept format used by auth0
+
+### Other
+- Default for custom scopes/groups
+
 ## [0.0.6](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.5...v0.0.6) - 2024-03-16
 
 ### Added

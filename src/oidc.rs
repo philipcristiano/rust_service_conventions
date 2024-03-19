@@ -25,12 +25,18 @@ use maud::{html, DOCTYPE};
 use std::error::Error;
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct AuthConfig {
+pub struct OIDCConfig {
     pub issuer_url: Url,
     pub redirect_url: RedirectUrl,
     pub client_id: String,
     pub client_secret: ClientSecret,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuthConfig {
+    pub oidc_config: OIDCConfig,
     pub post_auth_path: String,
+    pub scopes: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -38,7 +44,8 @@ pub struct OIDCUser {
     pub id: String,
     pub name: Option<String>,
     pub email: Option<email_address::EmailAddress>,
-    pub group_claims: Vec<String>,
+    pub groups: Vec<String>,
+    pub scopes: Vec<String>,
 }
 impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
     fn from(uic: UserInfoClaims<GroupClaims, CoreGenderClaim>) -> Self {
@@ -46,7 +53,8 @@ impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
             id: uic.standard_claims().subject().as_str().into(),
             name: uic_name_to_name(uic.standard_claims().name()),
             email: uic_email_to_email(uic.standard_claims().email()),
-            group_claims: vec![],
+            groups: uic.additional_claims().groups.clone(),
+            scopes: uic.additional_claims().scopes.clone(),
         }
     }
 }
@@ -126,7 +134,7 @@ use openidconnect::{OAuth2TokenResponse, TokenResponse};
 pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, Box<dyn Error>> {
     let provider_metadata = CoreProviderMetadata::discover_async(
         //&IssuerUrl::new("https://accounts.example.com".to_string())?,
-        IssuerUrl::from_url(auth_config.issuer_url),
+        IssuerUrl::from_url(auth_config.oidc_config.issuer_url),
         async_http_client,
     )
     .await?;
@@ -135,17 +143,17 @@ pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, Box
         provider_metadata,
         //ClientId::new("client_id".to_string()),
         //Some(ClientSecret::new("client_secret".to_string())),
-        ClientId::new(auth_config.client_id),
-        Some(auth_config.client_secret),
+        ClientId::new(auth_config.oidc_config.client_id),
+        Some(auth_config.oidc_config.client_secret),
     )
     // Set the URL the user will be redirected to after the authorization process.
     //.set_redirect_uri(RedirectUrl::new("http://redirect".to_string())?);
-    .set_redirect_uri(auth_config.redirect_url);
+    .set_redirect_uri(auth_config.oidc_config.redirect_url);
     return Ok(client);
 }
 
 #[tracing::instrument]
-pub async fn get_auth_url(client: CoreClient) -> AuthContent {
+pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthContent {
     // Create an OpenID Connect client by specifying the client ID, client secret, authorization URL
     // and token URL.
 
@@ -153,17 +161,19 @@ pub async fn get_auth_url(client: CoreClient) -> AuthContent {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the full authorization URL.
-    let (auth_url, csrf_token, nonce) = client
+    let mut url_builder = client
         .authorize_url(
             CoreAuthenticationFlow::AuthorizationCode,
             CsrfToken::new_random,
             Nonce::new_random,
-        )
-        // Set the desired scopes.
-        .add_scope(Scope::new("profile".to_string()))
-        .add_scope(Scope::new("email".to_string()))
-        // Set the PKCE code challenge.
-        .set_pkce_challenge(pkce_challenge)
+        );
+
+    for scope in &config.scopes {
+        url_builder = url_builder.add_scope(Scope::new(scope.clone()));
+    }
+
+    let (auth_url, csrf_token, nonce) = url_builder.set_pkce_challenge(pkce_challenge)
+        // Set the PKCE code challenge and generate URL
         .url();
 
     // This is the URL you should redirect the user to, in order to trigger the authorization
@@ -224,6 +234,7 @@ pub async fn next(
         .request_async(async_http_client)
         .await
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
+    tracing::debug!("Userinfo claims: {:?}", userinfo_claims);
 
     // If available, we can use the UserInfo endpoint to request additional information.
 
@@ -248,7 +259,7 @@ const COOKIE_NAME: &str = "auth_flow";
 #[tracing::instrument]
 async fn oidc_login(State(config): State<AuthConfig>, cookies: Cookies) -> impl IntoResponse {
     let auth_client = construct_client(config.clone()).await.unwrap();
-    let auth_content = get_auth_url(auth_client).await;
+    let auth_content = get_auth_url(&config, auth_client).await;
     let key = KEY.get().unwrap();
     let private_cookies = cookies.private(key);
     let cookie_val = serde_json::to_string(&auth_content.verify).unwrap();

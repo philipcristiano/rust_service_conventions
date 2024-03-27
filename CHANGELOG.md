@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.8...v0.0.9) - 2024-03-27
+
+### Fixed
+- *(deps)* update rust crate openidconnect to 3.5.0
+
+### Other
+- Switch to renovate
+
 ## [0.0.8](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.7...v0.0.8) - 2024-03-19
 
 ### Added

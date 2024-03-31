@@ -3,13 +3,10 @@ use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
 
-use opentelemetry::KeyValue;
 use opentelemetry_sdk::{
     runtime,
     trace::{BatchConfig, RandomIdGenerator, Sampler, Tracer},
-    Resource,
 };
-use opentelemetry_semantic_conventions::resource::{SERVICE_NAME, SERVICE_VERSION};
 use tracing_opentelemetry::OpenTelemetryLayer;
 
 pub fn setup(level: Level) {
@@ -25,15 +22,6 @@ pub fn setup(level: Level) {
                 .with_filter(LevelFilter::from_level(level)),
         );
     tracing::subscriber::set_global_default(subscriber).expect("Could not setup tracing/logging");
-
-    tracing::info!("Tracing resource {:?}", resource());
-}
-
-fn resource() -> Resource {
-    Resource::new(vec![
-        KeyValue::new(SERVICE_NAME, env!("CARGO_PKG_NAME")),
-        KeyValue::new(SERVICE_VERSION, env!("CARGO_PKG_VERSION")),
-    ])
 }
 
 // Construct Tracer for OpenTelemetryLayer
@@ -50,8 +38,7 @@ fn init_tracer() -> Tracer {
                     1.0,
                 ))))
                 // If export trace to AWS X-Ray, you can use XrayIdGenerator
-                .with_id_generator(RandomIdGenerator::default())
-                .with_resource(resource()),
+                .with_id_generator(RandomIdGenerator::default()),
         )
         .with_batch_config(BatchConfig::default())
         .with_exporter(exporter)

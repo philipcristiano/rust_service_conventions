@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 opentelemetry = { version = "0.22.0", features = [], optional = true }
-opentelemetry-otlp = { version = "0.15.0", features = ["grpc-tonic", "http-proto"], optional = true }
+opentelemetry-otlp = { version = "0.15.0", features = ["trace", "grpc-tonic", "http-proto", "reqwest-rustls"], optional = true }
 opentelemetry-semantic-conventions = { version = "0.14.0", optional = true}
 opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"], optional = true }
 

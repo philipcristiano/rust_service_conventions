@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.13](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.12...v0.0.13) - 2024-04-03
+
+### Fixed
+- tracing: Set tracing level to tracing
+
+### Other
+- *(deps)* lock file maintenance
+
 ## [0.0.12](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.11...v0.0.12) - 2024-03-31
 
 ### Fixed

@@ -3,6 +3,8 @@ use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
 
+use crate::tracing_json_fmt;
+
 use opentelemetry_sdk::{
     runtime,
     trace::{BatchConfig, RandomIdGenerator, Sampler, Tracer},
@@ -19,6 +21,7 @@ pub fn setup(level: Level) {
         .with(
             tracing_subscriber::fmt::layer()
                 .json()
+                .event_format(tracing_json_fmt::Json)
                 .with_filter(LevelFilter::from_level(level)),
         );
     tracing::subscriber::set_global_default(subscriber).expect("Could not setup tracing/logging");

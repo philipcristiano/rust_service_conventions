@@ -19,6 +19,7 @@ pub fn setup(level: Level) {
         .with(
             tracing_subscriber::fmt::layer()
                 .json()
+                .with_current_span(true)
                 .with_filter(LevelFilter::from_level(level)),
         );
     tracing::subscriber::set_global_default(subscriber).expect("Could not setup tracing/logging");

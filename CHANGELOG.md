@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.15](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.14...v0.0.15) - 2024-04-16
+
+### Fixed
+- fix!(oidc): Set key via config
+
+### Other
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.14](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.13...v0.0.14) - 2024-04-03
 
 ### Other

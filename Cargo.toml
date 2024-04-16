@@ -4,6 +4,7 @@ version = "0.0.15"
 edition = "2021"
 description = "Conventions for services"
 license = "Apache-2.0"
+repository = "https://github.com/philipcristiano/rust_service_conventions"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

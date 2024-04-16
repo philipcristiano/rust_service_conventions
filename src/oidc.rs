@@ -22,6 +22,7 @@ use tower_cookies::{Cookie, Cookies, Key};
 use url::Url;
 
 use maud::{html, DOCTYPE};
+use redacted::FullyRedacted;
 use std::error::Error;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -30,6 +31,7 @@ pub struct OIDCConfig {
     pub redirect_url: RedirectUrl,
     pub client_id: String,
     pub client_secret: ClientSecret,
+    pub key: FullyRedacted<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -248,8 +250,9 @@ pub async fn next(
 }
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
-    let my_key: &[u8] = &[0; 64]; // Your real key must be cryptographically random
-    KEY.set(Key::from(my_key)).ok();
+    let keyval = Key::try_from(auth_config.oidc_config.key.into_inner().as_bytes())
+        .expect("Key must be >=64 bytes");
+    KEY.set(keyval).ok();
     let r = Router::new()
         .route("/login", get(oidc_login))
         .route("/login_auth", get(login_auth));

@@ -9,7 +9,7 @@ repository = "https://github.com/philipcristiano/rust_service_conventions"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-opentelemetry = { version = "0.22.0", features = [], optional = true }
+opentelemetry = { version = "0.23.0", features = [], optional = true }
 opentelemetry-otlp = { version = "0.15.0", features = ["trace", "grpc-tonic", "http-proto", "reqwest-rustls", "tls", "tls-roots"], optional = true }
 opentelemetry-semantic-conventions = { version = "0.14.0", optional = true}
 opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"], optional = true }

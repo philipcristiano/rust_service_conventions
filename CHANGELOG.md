@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.17](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.16...v0.0.17) - 2024-07-10
+
+### Added
+- `tracing-http` feature with a tower-http tracelayer
+
+### Fixed
+- Enabled passing through tracecontext if it exists
+- *(deps)* update rust crate opentelemetry-semantic-conventions to 0.15.0
+- *(deps)* update rust crate opentelemetry to 0.23.0
+- *(deps)* update rust crate serde to 1.0.200
+- *(deps)* update rust crate serde_json to 1.0.116
+- *(deps)* update rust crate serde to 1.0.199
+- *(deps)* update rust crate axum-core to 0.4.3
+- *(deps)* update rust crate anyhow to 1.0.82
+- *(deps)* update rust crate async-trait to 0.1.80
+
+### Other
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.16](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.15...v0.0.16) - 2024-04-16
 
 ### Other

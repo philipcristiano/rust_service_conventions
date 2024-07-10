@@ -9,6 +9,10 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 
 pub fn setup(level: Level) {
+    use opentelemetry::global;
+    use opentelemetry_sdk::propagation::TraceContextPropagator;
+    global::set_text_map_propagator(TraceContextPropagator::new());
+
     let subscriber = registry()
         .with(
             OpenTelemetryLayer::new(init_tracer())

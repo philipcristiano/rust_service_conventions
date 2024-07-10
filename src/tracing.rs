@@ -3,11 +3,10 @@ use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry;
 
-use opentelemetry_sdk::{
-    runtime,
-    trace::{BatchConfig, RandomIdGenerator, Sampler, Tracer},
-};
+use opentelemetry_sdk::trace::Tracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
+
+use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 
 pub fn setup(level: Level) {
     let subscriber = registry()
@@ -26,22 +25,17 @@ pub fn setup(level: Level) {
 
 // Construct Tracer for OpenTelemetryLayer
 fn init_tracer() -> Tracer {
+    use opentelemetry::trace::TracerProvider as _;
     use opentelemetry_otlp::TonicExporterBuilder;
-    let exporter = TonicExporterBuilder::default();
-    //let otlp_exporter = opentelemetry_otlp::new_exporter().http();
-    opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_trace_config(
-            opentelemetry_sdk::trace::Config::default()
-                // Customize sampling strategy
-                .with_sampler(Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(
-                    1.0,
-                ))))
-                // If export trace to AWS X-Ray, you can use XrayIdGenerator
-                .with_id_generator(RandomIdGenerator::default()),
-        )
-        .with_batch_config(BatchConfig::default())
-        .with_exporter(exporter)
-        .install_batch(runtime::Tokio)
-        .unwrap()
+    use opentelemetry_sdk::trace::TracerProvider;
+    let exporter = TonicExporterBuilder::default()
+        .build_span_exporter()
+        .expect("Init");
+    let provider = TracerProvider::builder()
+        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+        .build();
+    let tracer = provider.tracer("service_conventions");
+
+    opentelemetry::global::set_tracer_provider(provider);
+    return tracer;
 }

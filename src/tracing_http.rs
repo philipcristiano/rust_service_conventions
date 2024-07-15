@@ -1,6 +1,9 @@
+use opentelemetry::global;
+use std::collections::HashMap;
 use tower_http::classify::{ServerErrorsAsFailures, SharedClassifier};
 use tower_http::trace::{self, TraceLayer};
 use tracing::Level;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 pub type TracingLayer = TraceLayer<SharedClassifier<ServerErrorsAsFailures>>;
 pub fn trace_layer(
@@ -10,6 +13,27 @@ pub fn trace_layer(
         .make_span_with(MakeSpan::new())
         .on_request(OnRequest::new())
         .on_response(trace::DefaultOnResponse::new().level(level))
+}
+
+pub fn get_tracing_headers() -> http::HeaderMap {
+    let mut map: HashMap<String, String> = HashMap::new();
+    let ctx = tracing::Span::current().context();
+    global::get_text_map_propagator(|propagator| propagator.inject_context(&ctx, &mut map));
+    let mut hm = http::HeaderMap::new();
+    if let Some(tp) = map.get("traceparent") {
+        hm.insert(
+            "traceparent",
+            http::HeaderValue::from_str(tp).expect("cannot convert"),
+        );
+    }
+    if let Some(tp) = map.get("tracestate") {
+        hm.insert(
+            "tracestate",
+            http::HeaderValue::from_str(tp).expect("cannot convert"),
+        );
+    }
+    tracing::debug!(otel_headers= ?map, headermap= ?hm, "Tracing headers");
+    hm
 }
 
 #[derive(Clone, Debug)]
@@ -45,7 +69,6 @@ impl OnRequest {
 
 impl<B> tower_http::trace::OnRequest<B> for OnRequest {
     fn on_request(&mut self, request: &http::request::Request<B>, s: &tracing::Span) {
-        use opentelemetry::global;
         use tracing_opentelemetry::OpenTelemetrySpanExt;
         let axum_headers = request.headers();
         let maybe_traceparent = axum_headers.get("traceparent");

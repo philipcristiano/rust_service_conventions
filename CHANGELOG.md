@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.19](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.18...v0.0.19) - 2024-08-03
+
+### Fixed
+- *(deps)* update rust crate tracing-opentelemetry to 0.25.0
+
+### Other
+- Merge remote-tracking branch 'origin/renovate/tracing-opentelemetry-0.x' into otel
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.18](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.17...v0.0.18) - 2024-07-15
 
 ### Other

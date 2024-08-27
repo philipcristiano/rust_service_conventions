@@ -17,6 +17,7 @@ use axum::{
     routing::get,
     Router,
 };
+use chrono::{DateTime, Utc};
 use openidconnect::reqwest::async_http_client;
 use tower_cookies::{Cookie, Cookies, Key};
 use url::Url;
@@ -45,18 +46,23 @@ pub struct AuthConfig {
 pub struct OIDCUser {
     pub id: String,
     pub name: Option<String>,
+    pub expiration: DateTime<Utc>,
     pub email: Option<email_address::EmailAddress>,
     pub groups: Vec<String>,
     pub scopes: Vec<String>,
 }
-impl From<UserInfoClaims<GroupClaims, CoreGenderClaim>> for OIDCUser {
-    fn from(uic: UserInfoClaims<GroupClaims, CoreGenderClaim>) -> Self {
+impl OIDCUser {
+    fn from_claims(
+        uic: &UserInfoClaims<GroupClaims, CoreGenderClaim>,
+        expiration: DateTime<Utc>,
+    ) -> Self {
         OIDCUser {
             id: uic.standard_claims().subject().as_str().into(),
             name: uic_name_to_name(uic.standard_claims().name()),
             email: uic_email_to_email(uic.standard_claims().email()),
             groups: uic.additional_claims().groups.clone(),
             scopes: uic.additional_claims().scopes.clone(),
+            expiration,
         }
     }
 }
@@ -163,18 +169,18 @@ pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthConten
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     // Generate the full authorization URL.
-    let mut url_builder = client
-        .authorize_url(
-            CoreAuthenticationFlow::AuthorizationCode,
-            CsrfToken::new_random,
-            Nonce::new_random,
-        );
+    let mut url_builder = client.authorize_url(
+        CoreAuthenticationFlow::AuthorizationCode,
+        CsrfToken::new_random,
+        Nonce::new_random,
+    );
 
     for scope in &config.scopes {
         url_builder = url_builder.add_scope(Scope::new(scope.clone()));
     }
 
-    let (auth_url, csrf_token, nonce) = url_builder.set_pkce_challenge(pkce_challenge)
+    let (auth_url, csrf_token, nonce) = url_builder
+        .set_pkce_challenge(pkce_challenge)
         // Set the PKCE code challenge and generate URL
         .url();
 
@@ -214,6 +220,7 @@ pub async fn next(
         .id_token()
         .ok_or_else(|| anyhow!("Server did not return an ID token"))?;
     let claims = id_token.claims(&client.id_token_verifier(), &auth_verify.nonce)?;
+    claims.expiration();
 
     // Verify the access token hash to ensure that the access token hasn't been substituted for
     // another user's.
@@ -237,16 +244,8 @@ pub async fn next(
         .await
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
     tracing::debug!("Userinfo claims: {:?}", userinfo_claims);
-
     // If available, we can use the UserInfo endpoint to request additional information.
-
-    // The user_info request uses the AccessToken returned in the token response. To parse custom
-    // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
-    // CoreUserInfoClaims type alias.
-
-    // See the OAuth2TokenResponse trait for a listing of other available fields such as
-    // access_token() and refresh_token().
-    return Ok(userinfo_claims.into());
+    return Ok(OIDCUser::from_claims(&userinfo_claims, claims.expiration()));
 }
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
@@ -333,7 +332,10 @@ async fn login_auth(
     let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
     let cookie_val_user = serde_json::to_string(&oidc_user).unwrap();
     let mut user_cookie = Cookie::new(USER_COOKIE_NAME, cookie_val_user);
+    let max_age = oidc_user.expiration - chrono::Utc::now();
+    let max_age_duration = tower_cookies::cookie::time::Duration::new(max_age.num_seconds(), 0);
     user_cookie.set_path("/");
+    user_cookie.set_max_age(Some(max_age_duration));
     private_cookies.add(user_cookie);
 
     Ok(Redirect::to(&config.post_auth_path).into_response())

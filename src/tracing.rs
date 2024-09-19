@@ -32,7 +32,9 @@ fn init_tracer() -> Tracer {
     use opentelemetry::trace::TracerProvider as _;
     use opentelemetry_otlp::TonicExporterBuilder;
     use opentelemetry_sdk::trace::TracerProvider;
+    let tls_config = tonic::transport::ClientTlsConfig::new().with_native_roots();
     let exporter = TonicExporterBuilder::default()
+        .with_tls_config(tls_config)
         .build_span_exporter()
         .expect("Init");
     let provider = TracerProvider::builder()

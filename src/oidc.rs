@@ -336,6 +336,9 @@ async fn login_auth(
     let max_age_duration = tower_cookies::cookie::time::Duration::new(max_age.num_seconds(), 0);
     user_cookie.set_path("/");
     user_cookie.set_max_age(Some(max_age_duration));
+    user_cookie.set_same_site(Some(tower_cookies::cookie::SameSite::Strict));
+    user_cookie.set_secure(Some(true));
+    user_cookie.set_http_only(Some(true));
     private_cookies.add(user_cookie);
 
     Ok(Redirect::to(&config.post_auth_path).into_response())

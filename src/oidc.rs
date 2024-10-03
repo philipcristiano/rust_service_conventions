@@ -80,6 +80,29 @@ fn uic_name_to_name(
     None
 }
 
+use thiserror::Error;
+#[derive(Error, Debug)]
+pub enum OIDCUserError {
+    #[error("Error loading cookies")]
+    CookieLoadError,
+    #[error("Missing Cookie")]
+    MissingCookie,
+    #[error("Problem during cookie Deserialize {0}")]
+    CookieDeserializeError(serde_json::Error),
+}
+impl axum::response::IntoResponse for OIDCUserError {
+    fn into_response(self) -> Response {
+        let r = match self {
+            OIDCUserError::CookieLoadError => (StatusCode::BAD_REQUEST, "Error loading cookies"),
+            OIDCUserError::MissingCookie => (StatusCode::BAD_REQUEST, "Missing User Cookie"),
+            OIDCUserError::CookieDeserializeError(_) => {
+                (StatusCode::BAD_REQUEST, "Problem with user cookie")
+            }
+        };
+        r.into_response()
+    }
+}
+
 use async_trait::async_trait;
 use axum_core::extract::FromRequestParts;
 use http::request::Parts;
@@ -89,25 +112,28 @@ impl<S> FromRequestParts<S> for OIDCUser
 where
     S: Send + Sync,
 {
-    type Rejection = (http::StatusCode, &'static str);
+    type Rejection = OIDCUserError;
 
     async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let cookies = Cookies::from_request_parts(req, state).await?;
-        let key = KEY.get().unwrap();
-        let private_cookies = cookies.private(key);
+        if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
+            let key = KEY.get().unwrap();
+            let private_cookies = cookies.private(key);
 
-        let cookie = match private_cookies.get(USER_COOKIE_NAME) {
-            Some(c) => c,
-            _ => return Err((StatusCode::BAD_REQUEST, "User Cookie problem a")),
-        };
-        let oidc_user = serde_json::from_str(&cookie.value());
+            let cookie = match private_cookies.get(USER_COOKIE_NAME) {
+                Some(c) => c,
+                _ => return Err(OIDCUserError::MissingCookie),
+            };
+            let oidc_user = serde_json::from_str(&cookie.value());
 
-        match oidc_user {
-            Err(e) => {
-                tracing::error!("User Cookie problem {:?}", e);
-                Err((StatusCode::BAD_REQUEST, "User Cookie problem"))
+            match oidc_user {
+                Err(e) => {
+                    tracing::error!("User Cookie problem {:?}", e);
+                    Err(OIDCUserError::CookieDeserializeError(e))
+                }
+                Ok(ou) => Ok(ou),
             }
-            Ok(ou) => Ok(ou),
+        } else {
+            Err(OIDCUserError::CookieLoadError)
         }
     }
 }

@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.22](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.21...v0.0.22) - 2024-10-03
+
+### Fixed
+
+- oidc: Wrap oidc cookie errors with enum
+- Secure cookies
+
+### Other
+
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.21](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.20...v0.0.21) - 2024-09-20
 
 ### Fixed

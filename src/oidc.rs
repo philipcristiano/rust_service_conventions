@@ -5,13 +5,14 @@ use openidconnect::core::{
 use openidconnect::{
     AccessTokenHash, AdditionalClaims, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
     EmptyAdditionalClaims, IdTokenClaims, IssuerUrl, Nonce, PkceCodeChallenge, PkceCodeVerifier,
-    RedirectUrl, Scope, UserInfoClaims,
+    RedirectUrl, RefreshToken, RefreshTokenRequest, Scope, UserInfoClaims,
 };
+
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 use axum::{
-    extract::{Query, State},
+    extract::{FromRef, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
     routing::get,
@@ -50,10 +51,13 @@ pub struct OIDCUser {
     pub email: Option<email_address::EmailAddress>,
     pub groups: Vec<String>,
     pub scopes: Vec<String>,
+    #[serde(skip_serializing)]
+    pub refresh_token: Option<RefreshToken>,
 }
 impl OIDCUser {
     fn from_claims(
         uic: &UserInfoClaims<GroupClaims, CoreGenderClaim>,
+        refresh_token: Option<RefreshToken>,
         expiration: DateTime<Utc>,
     ) -> Self {
         OIDCUser {
@@ -63,6 +67,7 @@ impl OIDCUser {
             groups: uic.additional_claims().groups.clone(),
             scopes: uic.additional_claims().scopes.clone(),
             expiration,
+            refresh_token,
         }
     }
 }
@@ -89,6 +94,10 @@ pub enum OIDCUserError {
     MissingCookie,
     #[error("Problem during cookie Deserialize {0}")]
     CookieDeserializeError(serde_json::Error),
+    #[error("Problem with constructing OIDC infra {0}")]
+    ServerError(#[from] anyhow::Error),
+    #[error("Problem refreshing user")]
+    RefreshUserError,
 }
 impl axum::response::IntoResponse for OIDCUserError {
     fn into_response(self) -> Response {
@@ -98,6 +107,8 @@ impl axum::response::IntoResponse for OIDCUserError {
             OIDCUserError::CookieDeserializeError(_) => {
                 (StatusCode::BAD_REQUEST, "Problem with user cookie")
             }
+            OIDCUserError::ServerError(_) => (StatusCode::UNAUTHORIZED, "Problem verifying user"),
+            OIDCUserError::RefreshUserError => (StatusCode::BAD_REQUEST, "Unable to refresh user"),
         };
         r.into_response()
     }
@@ -107,10 +118,12 @@ use async_trait::async_trait;
 use axum_core::extract::FromRequestParts;
 use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
+const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
 #[async_trait]
 impl<S> FromRequestParts<S> for OIDCUser
 where
     S: Send + Sync,
+    AuthConfig: FromRef<S>,
 {
     type Rejection = OIDCUserError;
 
@@ -119,18 +132,40 @@ where
             let key = KEY.get().unwrap();
             let private_cookies = cookies.private(key);
 
-            let cookie = match private_cookies.get(USER_COOKIE_NAME) {
-                Some(c) => c,
-                _ => return Err(OIDCUserError::MissingCookie),
-            };
-            let oidc_user = serde_json::from_str(&cookie.value());
+            match private_cookies.get(USER_COOKIE_NAME) {
+                Some(c) => {
+                    let oidc_user = serde_json::from_str(&c.value());
 
-            match oidc_user {
-                Err(e) => {
-                    tracing::error!("User Cookie problem {:?}", e);
-                    Err(OIDCUserError::CookieDeserializeError(e))
+                    match oidc_user {
+                        Err(e) => {
+                            tracing::error!("User Cookie problem {:?}", e);
+                            Err(OIDCUserError::CookieDeserializeError(e))
+                        }
+                        Ok(ou) => Ok(ou),
+                    }
                 }
-                Ok(ou) => Ok(ou),
+                _ => {
+                    let extracted_state = AuthConfig::from_ref(state);
+
+                    match private_cookies.get(REFRESH_COOKIE_NAME) {
+                        Some(refresh_c) => {
+                            let client = construct_client(extracted_state).await?;
+                            match serde_json::from_str(&refresh_c.value()) {
+                                Ok(refresh_cookie_val) => {
+                                    let me = refresh(client, refresh_cookie_val).await;
+                                    if let Ok(oidcuser) = me {
+                                        save_user_to_cookies(&oidcuser, &private_cookies);
+                                        Ok(oidcuser)
+                                    } else {
+                                        Err(OIDCUserError::RefreshUserError)
+                                    }
+                                }
+                                Err(e) => Err(OIDCUserError::CookieDeserializeError(e)),
+                            }
+                        }
+                        _ => Err(OIDCUserError::MissingCookie),
+                    }
+                }
             }
         } else {
             Err(OIDCUserError::CookieLoadError)
@@ -165,7 +200,7 @@ impl AdditionalClaims for GroupClaims {}
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
 
 #[tracing::instrument]
-pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, Box<dyn Error>> {
+pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, anyhow::Error> {
     let provider_metadata = CoreProviderMetadata::discover_async(
         //&IssuerUrl::new("https://accounts.example.com".to_string())?,
         IssuerUrl::from_url(auth_config.oidc_config.issuer_url),
@@ -222,6 +257,47 @@ pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthConten
     };
     return ac;
 }
+#[tracing::instrument]
+async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Result<OIDCUser> {
+    // Once the user has been redirected to the redirect URL, you'll have access to the
+    // authorization code. For security reasons, your code should verify that the `state`
+    // parameter returned by the server matches `csrf_state`.
+
+    // Now you can exchange it for an access token and ID token.
+    let token_response = client
+        .exchange_refresh_token(&refresh_token)
+        // Set the PKCE code verifier.
+        .request_async(async_http_client)
+        .await?;
+    let maybe_refresh_token = token_response.refresh_token();
+
+    // Extract the ID token claims after verifying its authenticity and nonce.
+
+    if let Some(expires_in) = token_response.expires_in() {
+        let expires_at = chrono::Utc::now() + expires_in;
+
+        let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
+            .user_info(token_response.access_token().to_owned(), None)
+            .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
+            .request_async(async_http_client)
+            .await
+            .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
+        tracing::debug!("Userinfo claims: {:?}", userinfo_claims);
+        // If available, we can use the UserInfo endpoint to request additional information.
+        return Ok(OIDCUser::from_claims(
+            &userinfo_claims,
+            maybe_refresh_token.cloned(),
+            expires_at,
+        ));
+    } else {
+        Err(anyhow!("Missing expiry"))
+    }
+    // The authenticated user's identity is now available. See the IdTokenClaims struct for a
+    // complete listing of the available claims.
+    // The user_info request uses the AccessToken returned in the token response. To parse custom
+    // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
+    // CoreUserInfoClaims type alias.
+}
 
 #[tracing::instrument]
 pub async fn next(
@@ -246,7 +322,6 @@ pub async fn next(
         .id_token()
         .ok_or_else(|| anyhow!("Server did not return an ID token"))?;
     let claims = id_token.claims(&client.id_token_verifier(), &auth_verify.nonce)?;
-    claims.expiration();
 
     // Verify the access token hash to ensure that the access token hasn't been substituted for
     // another user's.
@@ -263,6 +338,7 @@ pub async fn next(
     // The user_info request uses the AccessToken returned in the token response. To parse custom
     // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
     // CoreUserInfoClaims type alias.
+    let maybe_refresh_token = token_response.refresh_token();
     let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
         .user_info(token_response.access_token().to_owned(), None)
         .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
@@ -271,7 +347,11 @@ pub async fn next(
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
     tracing::debug!("Userinfo claims: {:?}", userinfo_claims);
     // If available, we can use the UserInfo endpoint to request additional information.
-    return Ok(OIDCUser::from_claims(&userinfo_claims, claims.expiration()));
+    return Ok(OIDCUser::from_claims(
+        &userinfo_claims,
+        maybe_refresh_token.cloned(),
+        claims.expiration(),
+    ));
 }
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
@@ -356,16 +436,29 @@ async fn login_auth(
     }
 
     let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
-    let cookie_val_user = serde_json::to_string(&oidc_user).unwrap();
+    save_user_to_cookies(&oidc_user, &private_cookies);
+
+    Ok(Redirect::to(&config.post_auth_path).into_response())
+}
+
+fn save_user_to_cookies(user: &OIDCUser, jar: &tower_cookies::PrivateCookies) {
+    let cookie_val_user = serde_json::to_string(&user).unwrap();
     let mut user_cookie = Cookie::new(USER_COOKIE_NAME, cookie_val_user);
-    let max_age = oidc_user.expiration - chrono::Utc::now();
+    let max_age = user.expiration - chrono::Utc::now();
     let max_age_duration = tower_cookies::cookie::time::Duration::new(max_age.num_seconds(), 0);
     user_cookie.set_path("/");
     user_cookie.set_max_age(Some(max_age_duration));
     user_cookie.set_same_site(Some(tower_cookies::cookie::SameSite::Strict));
     user_cookie.set_secure(Some(true));
     user_cookie.set_http_only(Some(true));
-    private_cookies.add(user_cookie);
+    jar.add(user_cookie);
 
-    Ok(Redirect::to(&config.post_auth_path).into_response())
+    let refresh_val = serde_json::to_string(&user.refresh_token).unwrap();
+    let mut refresh_cookie = Cookie::new(REFRESH_COOKIE_NAME, refresh_val);
+    refresh_cookie.set_path("/");
+    refresh_cookie.set_max_age(Some(tower_cookies::cookie::time::Duration::new(86400, 0)));
+    refresh_cookie.set_same_site(Some(tower_cookies::cookie::SameSite::Strict));
+    refresh_cookie.set_secure(Some(true));
+    refresh_cookie.set_http_only(Some(true));
+    jar.add(refresh_cookie);
 }

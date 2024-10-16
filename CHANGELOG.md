@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.24](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.23...v0.0.24) - 2024-10-16
+
+### Fixed
+
+- oidc: Skip tracing params
+
 ## [0.0.23](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.22...v0.0.23) - 2024-10-16
 
 ### Added

@@ -199,7 +199,7 @@ impl AdditionalClaims for GroupClaims {}
 // Use OpenID Connect Discovery to fetch the provider metadata.
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, anyhow::Error> {
     let provider_metadata = CoreProviderMetadata::discover_async(
         //&IssuerUrl::new("https://accounts.example.com".to_string())?,
@@ -221,7 +221,7 @@ pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, any
     return Ok(client);
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthContent {
     // Create an OpenID Connect client by specifying the client ID, client secret, authorization URL
     // and token URL.
@@ -257,7 +257,7 @@ pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthConten
     };
     return ac;
 }
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Result<OIDCUser> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
@@ -299,7 +299,7 @@ async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Res
     // CoreUserInfoClaims type alias.
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn next(
     client: CoreClient,
     auth_verify: AuthVerify,
@@ -364,7 +364,7 @@ pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
     r
 }
 const COOKIE_NAME: &str = "auth_flow";
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn oidc_login(State(config): State<AuthConfig>, cookies: Cookies) -> impl IntoResponse {
     let auth_client = construct_client(config.clone()).await.unwrap();
     let auth_content = get_auth_url(&config, auth_client).await;
@@ -413,7 +413,7 @@ where
 use once_cell::sync::OnceCell;
 static KEY: OnceCell<Key> = OnceCell::new();
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 async fn login_auth(
     State(config): State<AuthConfig>,
     cookies: Cookies,

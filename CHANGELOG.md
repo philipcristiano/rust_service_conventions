@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.23](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.22...v0.0.23) - 2024-10-16
+
+### Added
+
+- Refresh user if cookie expires
+
+### Fixed
+
+- *(deps)* update rust crate tracing-opentelemetry to 0.27.0
+- *(deps)* update opentelemetry-rust monorepo to 0.26.0
+
+### Other
+
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.22](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.21...v0.0.22) - 2024-10-03
 
 ### Fixed

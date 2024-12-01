@@ -6,6 +6,8 @@ use tracing_subscriber::registry;
 use opentelemetry_sdk::trace::Tracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 
+use opentelemetry_otlp::TonicExporterBuilder;
+use opentelemetry_otlp::WithTonicConfig;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 
 pub fn setup(level: Level) {
@@ -30,13 +32,13 @@ pub fn setup(level: Level) {
 // Construct Tracer for OpenTelemetryLayer
 fn init_tracer() -> Tracer {
     use opentelemetry::trace::TracerProvider as _;
-    use opentelemetry_otlp::TonicExporterBuilder;
     use opentelemetry_sdk::trace::TracerProvider;
     let tls_config = tonic::transport::ClientTlsConfig::new().with_native_roots();
-    let exporter = TonicExporterBuilder::default()
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
         .with_tls_config(tls_config)
-        .build_span_exporter()
-        .expect("Init");
+        .build()
+        .expect("Init Exporter");
     let provider = TracerProvider::builder()
         .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
         .build();

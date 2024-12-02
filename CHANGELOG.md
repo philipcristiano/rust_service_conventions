@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.24](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.23...v0.0.24) - 2024-12-01
+
+### Fixed
+
+- *(deps)* update rust crate thiserror to v2
+- *(deps)* update opentelemetry-rust monorepo to 0.27.0 ([#147](https://github.com/philipcristiano/rust_service_conventions/pull/147))
+- oidc: Skip tracing params
+
+### Other
+
+- *(deps)* lock file maintenance ([#151](https://github.com/philipcristiano/rust_service_conventions/pull/151))
+- *(deps)* lock file maintenance ([#150](https://github.com/philipcristiano/rust_service_conventions/pull/150))
+- *(deps)* lock file maintenance ([#149](https://github.com/philipcristiano/rust_service_conventions/pull/149))
+- *(deps)* lock file maintenance ([#146](https://github.com/philipcristiano/rust_service_conventions/pull/146))
+- *(deps)* lock file maintenance ([#145](https://github.com/philipcristiano/rust_service_conventions/pull/145))
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.23](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.22...v0.0.23) - 2024-10-16
 
 ### Added

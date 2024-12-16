@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.25](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.24...v0.0.25) - 2024-12-16
+
+### Other
+
+- *(deps)* lock file maintenance ([#157](https://github.com/philipcristiano/rust_service_conventions/pull/157))
+- *(deps)* lock file maintenance ([#156](https://github.com/philipcristiano/rust_service_conventions/pull/156))
+- *(deps)* lock file maintenance ([#155](https://github.com/philipcristiano/rust_service_conventions/pull/155))
+- *(deps)* lock file maintenance ([#154](https://github.com/philipcristiano/rust_service_conventions/pull/154))
+- *(deps)* lock file maintenance ([#152](https://github.com/philipcristiano/rust_service_conventions/pull/152))
+
 ## [0.0.24](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.23...v0.0.24) - 2024-12-01
 
 ### Fixed

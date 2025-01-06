@@ -25,14 +25,14 @@ openidconnect = {version = "3.5.0", optional = true, features = ["accept-rfc3339
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 serde_json = {version = "1.0.116", optional = true}
 maud = { version="0.26.0", features = ["axum"], optional = true }
-axum = { version = "0.7.5", optional = true, features = ["macros"]}
-tower-cookies = { version = "0.10.0", features = ["signed", "private", "axum-core"], optional = true}
+axum = { version = "0.8.0", optional = true, features = ["macros"]}
+tower-cookies = { version = "0.11.0", features = ["signed", "private", "axum-core"], optional = true}
 tower-http = { version = "0.6.0", features = ["tracing", "trace", "compression-gzip"], optional = true }
 
 url = { version = "2.5.0", optional = true }
 email_address = {version = "0.2.4", optional = true}
 http = {version = "1.1.0", optional = true}
-axum-core =   {version = "0.4.3", optional = true}
+axum-core =   {version = "0.5.0", optional = true}
 async-trait = {version = "0.1.80", optional = true}
 redacted = {version = "0.2.0", optional = true}
 chrono = {version = "0.4.38", optional = true}

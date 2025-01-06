@@ -115,7 +115,7 @@ impl axum::response::IntoResponse for OIDCUserError {
 }
 
 use async_trait::async_trait;
-use axum_core::extract::FromRequestParts;
+use axum_core::extract::{OptionalFromRequestParts, FromRequestParts};
 use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
 const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
@@ -164,6 +164,59 @@ where
                             }
                         }
                         _ => Err(OIDCUserError::MissingCookie),
+                    }
+                }
+            }
+        } else {
+            Err(OIDCUserError::CookieLoadError)
+        }
+    }
+}
+
+impl<S> OptionalFromRequestParts<S> for OIDCUser
+where
+    S: Send + Sync,
+    AuthConfig: FromRef<S>,
+{
+    type Rejection = OIDCUserError;
+
+    async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Option<Self>, Self::Rejection> {
+        if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
+            let key = KEY.get().unwrap();
+            let private_cookies = cookies.private(key);
+
+            match private_cookies.get(USER_COOKIE_NAME) {
+                Some(c) => {
+                    let oidc_user = serde_json::from_str(&c.value());
+
+                    match oidc_user {
+                        Err(e) => {
+                            tracing::error!("User Cookie problem {:?}", e);
+                            Err(OIDCUserError::CookieDeserializeError(e))
+                        }
+                        Ok(ou) => Ok(ou),
+                    }
+                }
+                _ => {
+                    let extracted_state = AuthConfig::from_ref(state);
+
+                    match private_cookies.get(REFRESH_COOKIE_NAME) {
+                        Some(refresh_c) => {
+                            let client = construct_client(extracted_state).await?;
+                            match serde_json::from_str(&refresh_c.value()) {
+                                Ok(refresh_cookie_val) => {
+                                    let me = refresh(client, refresh_cookie_val).await;
+                                    if let Ok(oidcuser) = me {
+                                        save_user_to_cookies(&oidcuser, &private_cookies);
+                                        Ok(Some(oidcuser))
+                                    } else {
+                                        Err(OIDCUserError::RefreshUserError)
+                                    }
+                                }
+                                Err(e) => Err(OIDCUserError::CookieDeserializeError(e)),
+                            }
+                        }
+                        _ => Ok(None),
                     }
                 }
             }

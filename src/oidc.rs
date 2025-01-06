@@ -119,7 +119,7 @@ use axum_core::extract::FromRequestParts;
 use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
 const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
-#[async_trait]
+
 impl<S> FromRequestParts<S> for OIDCUser
 where
     S: Send + Sync,
@@ -395,7 +395,7 @@ impl IntoResponse for AuthError {
             p { "You are not authorized"}
             a href="/oidc/login" { "Restart" }
         };
-        (StatusCode::UNAUTHORIZED, resp).into_response()
+        (StatusCode::UNAUTHORIZED, resp.into_string()).into_response()
     }
 }
 

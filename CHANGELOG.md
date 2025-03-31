@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.27](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.26...v0.0.27) - 2025-03-31
+
+### Fixed
+
+- *(deps)* update rust crate maud to 0.27.0 ([#174](https://github.com/philipcristiano/rust_service_conventions/pull/174))
+
+### Other
+
+- *(deps)* lock file maintenance ([#186](https://github.com/philipcristiano/rust_service_conventions/pull/186))
+- *(deps)* lock file maintenance ([#184](https://github.com/philipcristiano/rust_service_conventions/pull/184))
+- *(deps)* lock file maintenance ([#183](https://github.com/philipcristiano/rust_service_conventions/pull/183))
+- *(deps)* lock file maintenance ([#182](https://github.com/philipcristiano/rust_service_conventions/pull/182))
+- *(deps)* lock file maintenance ([#181](https://github.com/philipcristiano/rust_service_conventions/pull/181))
+- *(deps)* lock file maintenance ([#180](https://github.com/philipcristiano/rust_service_conventions/pull/180))
+- *(deps)* lock file maintenance ([#179](https://github.com/philipcristiano/rust_service_conventions/pull/179))
+- *(deps)* lock file maintenance ([#176](https://github.com/philipcristiano/rust_service_conventions/pull/176))
+- *(deps)* lock file maintenance ([#175](https://github.com/philipcristiano/rust_service_conventions/pull/175))
+- *(deps)* lock file maintenance ([#173](https://github.com/philipcristiano/rust_service_conventions/pull/173))
+- *(deps)* lock file maintenance ([#171](https://github.com/philipcristiano/rust_service_conventions/pull/171))
+- *(deps)* lock file maintenance ([#169](https://github.com/philipcristiano/rust_service_conventions/pull/169))
+
 ## [0.0.26](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.25...v0.0.26) - 2025-01-06
 
 ### Other

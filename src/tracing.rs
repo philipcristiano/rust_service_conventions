@@ -32,15 +32,15 @@ pub fn setup(level: Level) {
 // Construct Tracer for OpenTelemetryLayer
 fn init_tracer() -> Tracer {
     use opentelemetry::trace::TracerProvider as _;
-    use opentelemetry_sdk::trace::TracerProvider;
-    let tls_config = tonic::transport::ClientTlsConfig::new().with_native_roots();
+    use opentelemetry_sdk::trace::SdkTracerProvider;
+    let tls_config = tonic::transport::ClientTlsConfig::new().with_enabled_roots();
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .with_tls_config(tls_config)
         .build()
         .expect("Init Exporter");
-    let provider = TracerProvider::builder()
-        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+    let provider = SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
         .build();
     let tracer = provider.tracer("service_conventions");
 

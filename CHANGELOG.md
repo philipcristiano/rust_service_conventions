@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.28](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.27...v0.0.28) - 2025-04-03
+
+### Fixed
+
+- *(deps)* update rust crate tonic to 0.13.0
+
+### Other
+
+- Update otel/tracing
+- Upgrade tracing-opentelemetry
+- Use mozilla TLS roots
+
 ## [0.0.27](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.26...v0.0.27) - 2025-03-31
 
 ### Fixed

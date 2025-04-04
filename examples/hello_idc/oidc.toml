@@ -1,0 +1,7 @@
+
+[auth]
+issuer_url = "https://example.com/oauth2/openid/hello_idc"
+redirect_url = "https://example.com/oidc/login_auth"
+client_id = "client_id"
+client_secret = "client_secret"
+key = "app_secret_keyapp_secret_keyapp_secret_keyapp_secret_keyapp_secret_key"

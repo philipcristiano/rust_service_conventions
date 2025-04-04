@@ -115,7 +115,7 @@ impl axum::response::IntoResponse for OIDCUserError {
 }
 
 use async_trait::async_trait;
-use axum_core::extract::{OptionalFromRequestParts, FromRequestParts};
+use axum_core::extract::{FromRequestParts, OptionalFromRequestParts};
 use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
 const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
@@ -180,7 +180,10 @@ where
 {
     type Rejection = OIDCUserError;
 
-    async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Option<Self>, Self::Rejection> {
+    async fn from_request_parts(
+        req: &mut Parts,
+        state: &S,
+    ) -> Result<Option<Self>, Self::Rejection> {
         if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
             let key = KEY.get().unwrap();
             let private_cookies = cookies.private(key);

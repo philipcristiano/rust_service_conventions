@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.30](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.29...v0.0.30) - 2025-06-30
+
+### Fixed
+
+- tonic: pick mozilla pki roots
+- *(deps)* update rust crate tracing-opentelemetry to 0.31.0
+
+### Other
+
+- Merge remote-tracking branch 'origin/renovate/tracing-opentelemetry-0.x'
+- *(deps)* lock file maintenance ([#209](https://github.com/philipcristiano/rust_service_conventions/pull/209))
+- *(deps)* lock file maintenance ([#208](https://github.com/philipcristiano/rust_service_conventions/pull/208))
+- *(deps)* lock file maintenance ([#207](https://github.com/philipcristiano/rust_service_conventions/pull/207))
+- *(deps)* lock file maintenance ([#206](https://github.com/philipcristiano/rust_service_conventions/pull/206))
+- *(deps)* lock file maintenance ([#204](https://github.com/philipcristiano/rust_service_conventions/pull/204))
+- *(deps)* lock file maintenance ([#202](https://github.com/philipcristiano/rust_service_conventions/pull/202))
+- *(deps)* lock file maintenance ([#201](https://github.com/philipcristiano/rust_service_conventions/pull/201))
+- *(deps)* lock file maintenance ([#200](https://github.com/philipcristiano/rust_service_conventions/pull/200))
+- *(deps)* lock file maintenance ([#199](https://github.com/philipcristiano/rust_service_conventions/pull/199))
+- *(deps)* lock file maintenance ([#198](https://github.com/philipcristiano/rust_service_conventions/pull/198))
+- *(deps)* lock file maintenance ([#197](https://github.com/philipcristiano/rust_service_conventions/pull/197))
+- *(deps)* lock file maintenance ([#196](https://github.com/philipcristiano/rust_service_conventions/pull/196))
+- Add example to build
+
 ## [0.0.29](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.28...v0.0.29) - 2025-04-03
 
 ### Other

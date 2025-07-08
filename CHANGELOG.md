@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.31](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.30...v0.0.31) - 2025-07-08
+
+### Other
+
+- *(deps)* update rust crate toml to 0.9.0 ([#213](https://github.com/philipcristiano/rust_service_conventions/pull/213))
+- *(deps)* lock file maintenance ([#211](https://github.com/philipcristiano/rust_service_conventions/pull/211))
+
 ## [0.0.30](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.29...v0.0.30) - 2025-06-30
 
 ### Fixed

@@ -1,4 +1,29 @@
 # Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.0.31](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.30...v0.0.31) - 2025-08-26
+
+### Other
+
+- Update openidconnect 4.x usage
+- Merge branch 'nix-sdk-stub' into renovate/openidconnect-4.x
+- remove deprecated stub
+- *(deps)* lock file maintenance ([#221](https://github.com/philipcristiano/rust_service_conventions/pull/221))
+- *(deps)* lock file maintenance ([#220](https://github.com/philipcristiano/rust_service_conventions/pull/220))
+- *(deps)* lock file maintenance ([#219](https://github.com/philipcristiano/rust_service_conventions/pull/219))
+- *(deps)* lock file maintenance ([#218](https://github.com/philipcristiano/rust_service_conventions/pull/218))
+- *(deps)* lock file maintenance ([#216](https://github.com/philipcristiano/rust_service_conventions/pull/216))
+- *(deps)* lock file maintenance ([#215](https://github.com/philipcristiano/rust_service_conventions/pull/215))
+- *(deps)* lock file maintenance ([#214](https://github.com/philipcristiano/rust_service_conventions/pull/214))
+- *(deps)* update rust crate toml to 0.9.0 ([#213](https://github.com/philipcristiano/rust_service_conventions/pull/213))
+- *(deps)* lock file maintenance ([#211](https://github.com/philipcristiano/rust_service_conventions/pull/211))
+# Changelog
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

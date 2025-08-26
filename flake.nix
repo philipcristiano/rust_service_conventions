@@ -21,7 +21,6 @@
                     extensions = [ "rust-src" "rustfmt" ];
                 })
                 rust-analyzer
-                darwin.apple_sdk.frameworks.Security # Should only be for darwin
             ];
           };
         }

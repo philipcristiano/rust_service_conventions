@@ -1,11 +1,13 @@
 use anyhow::anyhow;
 use openidconnect::core::{
     CoreAuthenticationFlow, CoreClient, CoreGenderClaim, CoreProviderMetadata,
+
 };
 use openidconnect::{
     AccessTokenHash, AdditionalClaims, AuthorizationCode, ClientId, ClientSecret, CsrfToken,
-    EmptyAdditionalClaims, IdTokenClaims, IssuerUrl, Nonce, PkceCodeChallenge, PkceCodeVerifier,
-    RedirectUrl, RefreshToken, RefreshTokenRequest, Scope, UserInfoClaims,
+    IssuerUrl, Nonce, PkceCodeChallenge, PkceCodeVerifier,
+    RedirectUrl, RefreshToken, Scope, UserInfoClaims,
+    EndpointSet, EndpointMaybeSet, EndpointNotSet,
 };
 
 use serde::{Deserialize, Serialize};
@@ -19,13 +21,13 @@ use axum::{
     Router,
 };
 use chrono::{DateTime, Utc};
-use openidconnect::reqwest::async_http_client;
 use tower_cookies::{Cookie, Cookies, Key};
 use url::Url;
 
 use maud::{html, DOCTYPE};
 use redacted::FullyRedacted;
-use std::error::Error;
+
+type CoreClientFromDiscovery = CoreClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointMaybeSet, EndpointMaybeSet>;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct OIDCConfig {
@@ -79,7 +81,7 @@ fn uic_email_to_email(
 fn uic_name_to_name(
     uicn: Option<&openidconnect::LocalizedClaim<openidconnect::EndUserName>>,
 ) -> Option<String> {
-    for (language_tag, i) in uicn?.iter() {
+    for (_language_tag, i) in uicn?.iter() {
         return Some(i.as_str().to_string());
     }
     None
@@ -114,7 +116,6 @@ impl axum::response::IntoResponse for OIDCUserError {
     }
 }
 
-use async_trait::async_trait;
 use axum_core::extract::{FromRequestParts, OptionalFromRequestParts};
 use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
@@ -256,18 +257,17 @@ impl AdditionalClaims for GroupClaims {}
 use openidconnect::{OAuth2TokenResponse, TokenResponse};
 
 #[tracing::instrument(skip_all)]
-pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, anyhow::Error> {
+pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClientFromDiscovery, anyhow::Error> {
+    let async_http_client = reqwest::Client::new();
     let provider_metadata = CoreProviderMetadata::discover_async(
         //&IssuerUrl::new("https://accounts.example.com".to_string())?,
         IssuerUrl::from_url(auth_config.oidc_config.issuer_url),
-        async_http_client,
+        &async_http_client,
     )
     .await?;
 
     let client = CoreClient::from_provider_metadata(
         provider_metadata,
-        //ClientId::new("client_id".to_string()),
-        //Some(ClientSecret::new("client_secret".to_string())),
         ClientId::new(auth_config.oidc_config.client_id),
         Some(auth_config.oidc_config.client_secret),
     )
@@ -278,7 +278,7 @@ pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClient, any
 }
 
 #[tracing::instrument(skip_all)]
-pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthContent {
+pub async fn get_auth_url(config: &AuthConfig, client: CoreClientFromDiscovery) -> AuthContent {
     // Create an OpenID Connect client by specifying the client ID, client secret, authorization URL
     // and token URL.
 
@@ -314,16 +314,17 @@ pub async fn get_auth_url(config: &AuthConfig, client: CoreClient) -> AuthConten
     return ac;
 }
 #[tracing::instrument(skip_all)]
-async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Result<OIDCUser> {
+async fn refresh(client: CoreClientFromDiscovery, refresh_token: RefreshToken) -> anyhow::Result<OIDCUser> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
 
     // Now you can exchange it for an access token and ID token.
+    let async_http_client = reqwest::Client::new();
     let token_response = client
-        .exchange_refresh_token(&refresh_token)
+        .exchange_refresh_token(&refresh_token)?
         // Set the PKCE code verifier.
-        .request_async(async_http_client)
+        .request_async(&async_http_client)
         .await?;
     let maybe_refresh_token = token_response.refresh_token();
 
@@ -335,7 +336,7 @@ async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Res
         let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
             .user_info(token_response.access_token().to_owned(), None)
             .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
-            .request_async(async_http_client)
+            .request_async(&async_http_client)
             .await
             .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
         tracing::debug!("Userinfo claims: {:?}", userinfo_claims);
@@ -357,7 +358,7 @@ async fn refresh(client: CoreClient, refresh_token: RefreshToken) -> anyhow::Res
 
 #[tracing::instrument(skip_all)]
 pub async fn next(
-    client: CoreClient,
+    client: CoreClientFromDiscovery,
     auth_verify: AuthVerify,
     auth_code: String,
 ) -> anyhow::Result<OIDCUser> {
@@ -366,11 +367,12 @@ pub async fn next(
     // parameter returned by the server matches `csrf_state`.
 
     // Now you can exchange it for an access token and ID token.
+    let async_http_client = reqwest::Client::new();
     let token_response = client
-        .exchange_code(AuthorizationCode::new(auth_code))
+        .exchange_code(AuthorizationCode::new(auth_code))?
         // Set the PKCE code verifier.
         .set_pkce_verifier(auth_verify.pkce_verifier)
-        .request_async(async_http_client)
+        .request_async(&async_http_client)
         .await?;
 
     // Extract the ID token claims after verifying its authenticity and nonce.
@@ -380,10 +382,19 @@ pub async fn next(
     let claims = id_token.claims(&client.id_token_verifier(), &auth_verify.nonce)?;
 
     // Verify the access token hash to ensure that the access token hasn't been substituted for
-    // another user's.
+    // another user's
+    //
+    let id_token_verifier = client.id_token_verifier();
+    let verify_key = id_token.signing_key(&id_token_verifier)?;
     if let Some(expected_access_token_hash) = claims.access_token_hash() {
         let actual_access_token_hash =
-            AccessTokenHash::from_token(token_response.access_token(), &id_token.signing_alg()?)?;
+            AccessTokenHash::from_token(
+                token_response.access_token(),
+                id_token.signing_alg()?,
+                verify_key,
+
+
+            )?;
         if actual_access_token_hash != *expected_access_token_hash {
             return Err(anyhow!("Invalid access token"));
         }
@@ -398,7 +409,7 @@ pub async fn next(
     let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
         .user_info(token_response.access_token().to_owned(), None)
         .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
-        .request_async(async_http_client)
+        .request_async(&async_http_client)
         .await
         .map_err(|err| anyhow!("Failed requesting user info: {:?}", err))?;
     tracing::debug!("Userinfo claims: {:?}", userinfo_claims);

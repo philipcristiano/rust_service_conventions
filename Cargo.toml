@@ -24,8 +24,8 @@ tracing-opentelemetry = { version = "0.31.0", optional = true}
 
 anyhow = {version = "1.0.82", optional = true}
 once_cell = { version = "1.19.0", optional = true}
-openidconnect = {version = "4.0.0", optional = true, features = ["accept-rfc3339-timestamps", "reqwest"]}
-reqwest = {version =  "0.12", optional = true}
+openidconnect = {version = "4.0.0", optional = true, features = ["accept-rfc3339-timestamps", "reqwest", "rustls-tls"]}
+reqwest = {version =  "0.12", optional = true, features = ["rustls-tls"], default-features = false}
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 serde_json = {version = "1.0.116", optional = true}
 maud = { version="0.27.0", features = ["axum"], optional = true }

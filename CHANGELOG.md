@@ -37,6 +37,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.33](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.32...v0.0.33) - 2025-11-10
+
+### Other
+
+- *(deps)* lock file maintenance ([#241](https://github.com/philipcristiano/rust_service_conventions/pull/241))
+- *(deps)* lock file maintenance ([#240](https://github.com/philipcristiano/rust_service_conventions/pull/240))
+- *(deps)* lock file maintenance ([#239](https://github.com/philipcristiano/rust_service_conventions/pull/239))
+- *(deps)* lock file maintenance ([#238](https://github.com/philipcristiano/rust_service_conventions/pull/238))
+- *(deps)* update agenthunt/conventional-commit-checker-action action to v2.0.1 ([#237](https://github.com/philipcristiano/rust_service_conventions/pull/237))
+- *(deps)* lock file maintenance ([#236](https://github.com/philipcristiano/rust_service_conventions/pull/236))
+- *(deps)* lock file maintenance ([#235](https://github.com/philipcristiano/rust_service_conventions/pull/235))
+- *(deps)* lock file maintenance ([#234](https://github.com/philipcristiano/rust_service_conventions/pull/234))
+- *(deps)* lock file maintenance ([#233](https://github.com/philipcristiano/rust_service_conventions/pull/233))
+- *(deps)* lock file maintenance ([#231](https://github.com/philipcristiano/rust_service_conventions/pull/231))
+- *(deps)* lock file maintenance ([#229](https://github.com/philipcristiano/rust_service_conventions/pull/229))
+- *(deps)* lock file maintenance ([#228](https://github.com/philipcristiano/rust_service_conventions/pull/228))
+- *(deps)* lock file maintenance ([#227](https://github.com/philipcristiano/rust_service_conventions/pull/227))
+- *(deps)* lock file maintenance ([#225](https://github.com/philipcristiano/rust_service_conventions/pull/225))
+
 ## [0.0.30](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.29...v0.0.30) - 2025-06-30
 
 ### Fixed

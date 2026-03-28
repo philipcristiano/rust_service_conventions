@@ -25,7 +25,3 @@ jobs:
         env:
           SQLX_OFFLINE: true
         run: nix --experimental-features 'nix-command flakes' develop --command cargo build
-    uses: "philipcristiano/workflows/.github/workflows/nix.yml@main"
-    with:
-      script: |
-        cargo build

@@ -7,9 +7,6 @@ on:
 
 jobs:
 
-  rust:
-    uses: "philipcristiano/workflows/.github/workflows/rust.yml@main"
-
   rust_release:
     uses: "philipcristiano/workflows/.github/workflows/rust_release.yml@main"
     needs: [flake, rust]
@@ -18,6 +15,15 @@ jobs:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   flake:
+    runs-on: nixos-latest
+    steps:
+      - name: Install Node
+        run: nix-env -iA nixpkgs.nodejs
+      - uses: actions/checkout@v4
+      - name: Build
+        env:
+          SQLX_OFFLINE: true
+        run: nix --experimental-features 'nix-command flakes' develop --command cargo build
     uses: "philipcristiano/workflows/.github/workflows/nix.yml@main"
     with:
       script: |

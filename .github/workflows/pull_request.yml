@@ -15,10 +15,16 @@ jobs:
         id: check-for-cc
         uses: agenthunt/conventional-commit-checker-action@v2.0.1
 
-  rust:
-    uses: "philipcristiano/workflows/.github/workflows/rust.yml@main"
-
   flake:
+    runs-on: nixos-latest
+    steps:
+      - name: Install Node
+        run: nix-env -iA nixpkgs.nodejs
+      - uses: actions/checkout@v4
+      - name: Build
+        env:
+          SQLX_OFFLINE: true
+        run: nix --experimental-features 'nix-command flakes' develop --command cargo build
     uses: "philipcristiano/workflows/.github/workflows/nix.yml@main"
     with:
       script: |

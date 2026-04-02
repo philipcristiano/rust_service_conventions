@@ -18,6 +18,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
+      - name: Set Git account
+        run: |
+          git config user.name "forgejo-actions[bot]"
+          git config user.email "forgejo-actions[bot]@example.com"
+
       - name: Run release-plz
         uses: philipcristiano/release-plz-action@main
         env:

@@ -37,6 +37,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.33](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.32...v0.0.33) - 2026-04-02
+
+### Fixed
+
+- URL protocol duplication
+- Fix syntax
+- Set git account
+- Use nix based release steps
+
+### Other
+
+- Include credentials for push
+- Enable verbose release info
+- Remove whitespace
+- *(deps)* update rust crate toml to v1
+- remove leftover bits
+- Migrate for Forgejo
+- *(deps)* lock file maintenance ([#250](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/250))
+- *(deps)* lock file maintenance ([#248](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/248))
+- *(deps)* lock file maintenance ([#247](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/247))
+- *(deps)* lock file maintenance ([#246](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/246))
+- *(deps)* lock file maintenance ([#245](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/245))
+- *(deps)* lock file maintenance ([#244](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/244))
+- *(deps)* lock file maintenance ([#243](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/243))
+- *(deps)* lock file maintenance ([#242](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/242))
+- *(deps)* lock file maintenance ([#241](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/241))
+- *(deps)* lock file maintenance ([#240](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/240))
+- *(deps)* lock file maintenance ([#239](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/239))
+- *(deps)* lock file maintenance ([#238](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/238))
+- *(deps)* update agenthunt/conventional-commit-checker-action action to v2.0.1 ([#237](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/237))
+- *(deps)* lock file maintenance ([#236](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/236))
+- *(deps)* lock file maintenance ([#235](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/235))
+- *(deps)* lock file maintenance ([#234](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/234))
+- *(deps)* lock file maintenance ([#233](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/233))
+- *(deps)* lock file maintenance ([#231](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/231))
+- *(deps)* lock file maintenance ([#229](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/229))
+- *(deps)* lock file maintenance ([#228](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/228))
+- *(deps)* lock file maintenance ([#227](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/227))
+- *(deps)* lock file maintenance ([#225](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/225))
+
 ## [0.0.30](https://github.com/philipcristiano/rust_service_conventions/compare/v0.0.29...v0.0.30) - 2025-06-30
 
 ### Fixed

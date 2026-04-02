@@ -7,7 +7,6 @@ on:
 
 jobs:
 
-
   rust_release:
     runs-on: nixos-runner
     steps:

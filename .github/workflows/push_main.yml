@@ -28,6 +28,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
           SQLX_OFFLINE: true
+        with:
+          VERBOSE: true
 
   flake:
     runs-on: nixos-runner

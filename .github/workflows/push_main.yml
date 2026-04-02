@@ -21,7 +21,9 @@ jobs:
         run: |
           git config user.name "forgejo-actions[bot]"
           git config user.email "forgejo-actions[bot]@example.com"
-          git config --global url."https://forgejo-actions[bot]:${{ secrets.RELEASE_PLZ_TOKEN }}@${FORGEJO_SERVER_URL}".insteadOf "${FORGEJO_SERVER_URL}"
+          BARE_HOST="${FORGEJO_SERVER_URL#https://}"
+          BARE_HOST="${BARE_HOST#http://}"
+          git config --global url."https://forgejo-actions[bot]:${{ secrets.RELEASE_PLZ_TOKEN }}@${BARE_HOST}".insteadOf "${FORGEJO_SERVER_URL}"
 
       - name: Run release-plz
         uses: philipcristiano/release-plz-action@main

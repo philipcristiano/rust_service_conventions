@@ -37,6 +37,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.34](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.33...v0.0.34) - 2026-04-05
+
+### Fixed
+
+- *(deps)* update rust crate reqwest to v0.13.2
+- *(deps)* update rust crate tracing-opentelemetry to 0.32.0
+
+### Other
+
+- Merge pull request 'chore(deps): update actions/checkout action to v6' ([#7](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/7)) from renovate/actions-checkout-6.x into main
+- *(deps)* update actions/checkout action to v6
+- Run tests during CI
+- Merge remote-tracking branch 'origin/renovate/opentelemetry-rust-monorepo' into renovate/tracing-opentelemetry-0.x
+
 ## [0.0.33](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.32...v0.0.33) - 2026-04-02
 
 ### Fixed

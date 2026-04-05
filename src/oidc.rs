@@ -258,7 +258,7 @@ use openidconnect::{OAuth2TokenResponse, TokenResponse};
 
 #[tracing::instrument(skip_all)]
 pub async fn construct_client(auth_config: AuthConfig) -> Result<CoreClientFromDiscovery, anyhow::Error> {
-    let async_http_client = reqwest::Client::new();
+    let async_http_client = openidconnect::reqwest::Client::new();
     let provider_metadata = CoreProviderMetadata::discover_async(
         //&IssuerUrl::new("https://accounts.example.com".to_string())?,
         IssuerUrl::from_url(auth_config.oidc_config.issuer_url),
@@ -320,7 +320,7 @@ async fn refresh(client: CoreClientFromDiscovery, refresh_token: RefreshToken) -
     // parameter returned by the server matches `csrf_state`.
 
     // Now you can exchange it for an access token and ID token.
-    let async_http_client = reqwest::Client::new();
+    let async_http_client = openidconnect::reqwest::Client::new();
     let token_response = client
         .exchange_refresh_token(&refresh_token)?
         // Set the PKCE code verifier.
@@ -367,7 +367,7 @@ pub async fn next(
     // parameter returned by the server matches `csrf_state`.
 
     // Now you can exchange it for an access token and ID token.
-    let async_http_client = reqwest::Client::new();
+    let async_http_client = openidconnect::reqwest::Client::new();
     let token_response = client
         .exchange_code(AuthorizationCode::new(auth_code))?
         // Set the PKCE code verifier.

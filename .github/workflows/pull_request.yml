@@ -20,6 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        env:
-          SQLX_OFFLINE: true
-        run: nix develop --command cargo build
+        run: |
+            nix develop --command cargo test
+            nix develop --command cargo build

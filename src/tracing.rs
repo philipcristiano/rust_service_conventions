@@ -6,7 +6,6 @@ use tracing_subscriber::registry;
 use opentelemetry_sdk::trace::Tracer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 
-use opentelemetry_otlp::TonicExporterBuilder;
 use opentelemetry_otlp::WithTonicConfig;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 
@@ -33,7 +32,8 @@ pub fn setup(level: Level) {
 fn init_tracer() -> Tracer {
     use opentelemetry::trace::TracerProvider as _;
     use opentelemetry_sdk::trace::SdkTracerProvider;
-    let tls_config = tonic::transport::ClientTlsConfig::new().with_enabled_roots();
+    let tls_config =
+        opentelemetry_otlp::tonic_types::transport::ClientTlsConfig::new().with_enabled_roots();
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .with_tls_config(tls_config)

@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.35](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.34...v0.0.35) - 2026-04-11
+
+### Other
+
+- Cleanup code to reduce duplication
+
 ## [0.0.34](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.33...v0.0.34) - 2026-04-05
 
 ### Fixed

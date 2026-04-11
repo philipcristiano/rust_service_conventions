@@ -118,8 +118,56 @@ impl axum::response::IntoResponse for OIDCUserError {
 
 use axum_core::extract::{FromRequestParts, OptionalFromRequestParts};
 use http::request::Parts;
+
 const USER_COOKIE_NAME: &str = "oidc_user";
 const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
+
+async fn extract_oidc_user_logic<S>(req: &mut Parts, state: &S) -> Result<Option<OIDCUser>, OIDCUserError>
+where
+    S: Send + Sync,
+    AuthConfig: FromRef<S>,  // Required to call AuthConfig::from_ref(state)
+{
+    if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
+        let key = KEY.get().unwrap();
+        let private_cookies = cookies.private(key);
+
+        match private_cookies.get(USER_COOKIE_NAME) {
+            Some(c) => {
+                let oidc_user: Result<OIDCUser, _> = serde_json::from_str(&c.value());
+                match oidc_user {
+                    Err(e) => {
+                        tracing::error!("User Cookie problem {:?}", e);
+                        return Err(OIDCUserError::CookieDeserializeError(e));
+                    }
+                    Ok(ou) => return Ok(Some(ou)),
+                }
+            }
+            _ => {
+                let extracted_state = AuthConfig::from_ref(state);
+                match private_cookies.get(REFRESH_COOKIE_NAME) {
+                    Some(refresh_c) => {
+                        let client = construct_client(extracted_state).await?;
+                        match serde_json::from_str(&refresh_c.value()) {
+                            Ok(refresh_cookie_val) => {
+                                let me = refresh(client, refresh_cookie_val).await;
+                                if let Ok(oidcuser) = me {
+                                    save_user_to_cookies(&oidcuser, &private_cookies);
+                                    return Ok(Some(oidcuser));
+                                } else {
+                                    return Err(OIDCUserError::RefreshUserError);
+                                }
+                            }
+                            Err(e) => return Err(OIDCUserError::CookieDeserializeError(e)),
+                        }
+                    }
+                    _ => return Ok(None), // No user cookie, no refresh token
+                }
+            }
+        }
+    } else {
+        Err(OIDCUserError::CookieLoadError)
+    }
+}
 
 impl<S> FromRequestParts<S> for OIDCUser
 where
@@ -129,47 +177,9 @@ where
     type Rejection = OIDCUserError;
 
     async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
-            let key = KEY.get().unwrap();
-            let private_cookies = cookies.private(key);
-
-            match private_cookies.get(USER_COOKIE_NAME) {
-                Some(c) => {
-                    let oidc_user = serde_json::from_str(&c.value());
-
-                    match oidc_user {
-                        Err(e) => {
-                            tracing::error!("User Cookie problem {:?}", e);
-                            Err(OIDCUserError::CookieDeserializeError(e))
-                        }
-                        Ok(ou) => Ok(ou),
-                    }
-                }
-                _ => {
-                    let extracted_state = AuthConfig::from_ref(state);
-
-                    match private_cookies.get(REFRESH_COOKIE_NAME) {
-                        Some(refresh_c) => {
-                            let client = construct_client(extracted_state).await?;
-                            match serde_json::from_str(&refresh_c.value()) {
-                                Ok(refresh_cookie_val) => {
-                                    let me = refresh(client, refresh_cookie_val).await;
-                                    if let Ok(oidcuser) = me {
-                                        save_user_to_cookies(&oidcuser, &private_cookies);
-                                        Ok(oidcuser)
-                                    } else {
-                                        Err(OIDCUserError::RefreshUserError)
-                                    }
-                                }
-                                Err(e) => Err(OIDCUserError::CookieDeserializeError(e)),
-                            }
-                        }
-                        _ => Err(OIDCUserError::MissingCookie),
-                    }
-                }
-            }
-        } else {
-            Err(OIDCUserError::CookieLoadError)
+        match extract_oidc_user_logic::<S>(req, state).await? {
+            Some(user) => Ok(user),
+            None => Err(OIDCUserError::MissingCookie),
         }
     }
 }
@@ -185,48 +195,7 @@ where
         req: &mut Parts,
         state: &S,
     ) -> Result<Option<Self>, Self::Rejection> {
-        if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
-            let key = KEY.get().unwrap();
-            let private_cookies = cookies.private(key);
-
-            match private_cookies.get(USER_COOKIE_NAME) {
-                Some(c) => {
-                    let oidc_user = serde_json::from_str(&c.value());
-
-                    match oidc_user {
-                        Err(e) => {
-                            tracing::error!("User Cookie problem {:?}", e);
-                            Err(OIDCUserError::CookieDeserializeError(e))
-                        }
-                        Ok(ou) => Ok(ou),
-                    }
-                }
-                _ => {
-                    let extracted_state = AuthConfig::from_ref(state);
-
-                    match private_cookies.get(REFRESH_COOKIE_NAME) {
-                        Some(refresh_c) => {
-                            let client = construct_client(extracted_state).await?;
-                            match serde_json::from_str(&refresh_c.value()) {
-                                Ok(refresh_cookie_val) => {
-                                    let me = refresh(client, refresh_cookie_val).await;
-                                    if let Ok(oidcuser) = me {
-                                        save_user_to_cookies(&oidcuser, &private_cookies);
-                                        Ok(Some(oidcuser))
-                                    } else {
-                                        Err(OIDCUserError::RefreshUserError)
-                                    }
-                                }
-                                Err(e) => Err(OIDCUserError::CookieDeserializeError(e)),
-                            }
-                        }
-                        _ => Ok(None),
-                    }
-                }
-            }
-        } else {
-            Err(OIDCUserError::CookieLoadError)
-        }
+        extract_oidc_user_logic::<S>(req, state).await
     }
 }
 

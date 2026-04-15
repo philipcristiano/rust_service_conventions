@@ -18,7 +18,7 @@ jobs:
   flake:
     runs-on: nixos-runner
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@064fe7f3312418007dea2b49a19844a9ee378f49 #main
       - name: Build
         run: |
             nix develop --command cargo test

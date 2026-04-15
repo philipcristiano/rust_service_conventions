@@ -12,7 +12,7 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@064fe7f3312418007dea2b49a19844a9ee378f49 #main
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
@@ -26,7 +26,7 @@ jobs:
           git config --global url."https://forgejo-actions[bot]:${{ secrets.RELEASE_PLZ_TOKEN }}@${BARE_HOST}".insteadOf "${FORGEJO_SERVER_URL}"
 
       - name: Run release-plz
-        uses: philipcristiano/release-plz-action@main
+        uses: philipcristiano/release-plz-action@b36028081feace3f98562d02fc9752b13f38ef68 # main
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
   flake:
     runs-on: nixos-runner
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@064fe7f3312418007dea2b49a19844a9ee378f49 # main
       - name: Build
         run: |
             nix develop --command cargo test

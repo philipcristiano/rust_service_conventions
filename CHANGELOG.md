@@ -37,6 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.37](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.36...v0.0.37) - 2026-04-16
+
+### Fixed
+
+- Remove reqwest from direct dependencies
+
+### Other
+
+- Expand CI to run tests more inclusively
+
 ## [0.0.36](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.35...v0.0.36) - 2026-04-16
 
 ### Fixed

@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.36](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.35...v0.0.36) - 2026-04-16
+
+### Fixed
+
+- Use tls-aws-lc roots instead of native
+
+### Other
+
+- *(deps)* update actions/checkout digest to 0c366fd
+- Pin workflow actions
+
 ## [0.0.35](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.34...v0.0.35) - 2026-04-11
 
 ### Other

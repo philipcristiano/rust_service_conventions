@@ -25,7 +25,6 @@ tracing-opentelemetry = { version = "0.32.0", optional = true}
 anyhow = {version = "1.0.82", optional = true}
 once_cell = { version = "1.19.0", optional = true}
 openidconnect = {version = "4.0.0", optional = true, features = ["accept-rfc3339-timestamps", "reqwest", "rustls-tls"]}
-reqwest = {version =  "0.13", optional = true}
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 serde_json = {version = "1.0.116", optional = true}
 maud = { version="0.27.0", features = ["axum"], optional = true }
@@ -47,7 +46,7 @@ thiserror = "2.0.0"
 tokio = { version = "1.37.0", features = ["full"]}
 clap = { version = "4.5.4", features = ["derive", "env"]}
 toml = "1.0.0"
-reqwest = { version = "0.13.0", features = ["rustls", "json"]}
+reqwest = { version = "0.13.0", default_features = false, features = ["rustls", "json"]}
 tower = { version = "0.5.2", features = ["full"]}
 
 
@@ -55,5 +54,5 @@ tower = { version = "0.5.2", features = ["full"]}
 all = ["tracing", "oidc", "tracing-http"]
 default = ["tracing", "oidc", "tracing-http"]
 tracing = ["dep:opentelemetry", "dep:opentelemetry-otlp", "dep:opentelemetry-semantic-conventions", "dep:tracing-subscriber", "dep:tracing", "dep:tracing-opentelemetry", "dep:opentelemetry_sdk", "dep:tonic"]
-oidc = ["dep:anyhow", "dep:chrono", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url", "dep:email_address", "dep:http", "dep:async-trait", "dep:axum-core", "dep:redacted", "dep:reqwest"]
+oidc = ["dep:anyhow", "dep:chrono", "dep:once_cell", "dep:openidconnect", "dep:serde", "dep:serde_json", "dep:maud", "dep:axum", "dep:tower-cookies", "dep:url", "dep:email_address", "dep:http", "dep:async-trait", "dep:axum-core", "dep:redacted"]
 tracing-http = ["tracing", "dep:http", "dep:tower-http"]

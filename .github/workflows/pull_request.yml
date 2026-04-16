@@ -19,8 +19,5 @@ jobs:
     runs-on: nixos-runner
     steps:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 #main
-      - name: Build
-        run: |
-            nix develop --command cargo test --workspace --all-targets --all-features
-            nix develop --command cargo test --workspace --doc --all-features
-            nix develop --command cargo build --all-targets
+      - name: Test and Build
+        uses: philipcristiano/actions/nix-rust-test-and-build@535a1cda5d945641884694f662e4c4ae3f6aab8c # main

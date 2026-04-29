@@ -1,3 +1,6 @@
+#[cfg(feature = "jwt")]
+pub mod jwt;
+
 #[cfg(feature = "oidc")]
 pub mod oidc;
 

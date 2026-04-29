@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.38](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.37...v0.0.38) - 2026-04-29
+
+### Added
+
+- JWT feature for signing/verifying URLs
+
+### Other
+
+- Merge pull request 'chore: Factor out the nix rust build action' ([#27](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/pulls/27)) from reusable-actions into main
+- Factor out the nix rust build action
+
 ## [0.0.37](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.36...v0.0.37) - 2026-04-16
 
 ### Fixed

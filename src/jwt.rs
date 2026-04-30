@@ -48,7 +48,6 @@ where
     T: serde::de::DeserializeOwned,
 {
     let k = KEY.get().ok_or(JWTError::KeyNotSet())?;
-;
     let claims = token.verify_with_key(k)?;
     Ok(claims)
 }
@@ -102,6 +101,7 @@ pub trait ClaimsGuard: serde::de::DeserializeOwned {
     fn authorize(&self) -> Result<(), String>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GuardedJWT<T: ClaimsGuard>(pub T);
 
 impl<S, T> FromRequestParts<S> for GuardedJWT<T>

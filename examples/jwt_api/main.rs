@@ -11,12 +11,12 @@ use std::fs;
 use std::net::SocketAddr;
 
 use http::status::StatusCode;
-use service_conventions::jwt::{ClaimsGuard, JWTClaims};
+use service_conventions::jwt::{GuardedJWT, ClaimsGuard, JWTClaims};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct APIClaims {
     pub sub: String,
-    pub role: String, // must equal "admin" — validated below
+    pub role: String,
 }
 
 // Then per-claims-type:
@@ -81,6 +81,7 @@ fn make_app(addr: &SocketAddr, args: &Args) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/api", get(api_handler))
+        .route("/authorized_api", get(auth_api_handler))
         .with_state(app_state.clone())
         .layer(service_conventions::tracing_http::trace_layer(Level::INFO))
         .route("/_health", get(health))
@@ -96,6 +97,7 @@ async fn root(State(state): State<AppState>) -> Response {
        (DOCTYPE)
             p { "Welcome!"}
             p {"`curl -H \"Authorization: Bearer " (token) "\" http://"( state.addr) "/api"}
+            p {"`curl -H \"Authorization: Bearer " (token) "\" http://"( state.addr) "/authorized_api"}
             p {"`curl -H \"Authorization: Bearer INVALID_TOKEN\" http://"( state.addr) "/api"}
             a href="/oidc/login" { "Login" }
     }
@@ -107,6 +109,11 @@ async fn health() -> Response {
 }
 
 async fn api_handler(api_claims: JWTClaims<APIClaims>) -> Response {
+    println!("Claims {api_claims:?}");
+    (StatusCode::OK, "OK").into_response()
+}
+
+async fn auth_api_handler(api_claims: GuardedJWT<APIClaims>) -> Response {
     println!("Claims {api_claims:?}");
     (StatusCode::OK, "OK").into_response()
 }

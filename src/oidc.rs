@@ -10,7 +10,7 @@ use openidconnect::{
     EndpointSet, EndpointMaybeSet, EndpointNotSet,
 };
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::str::FromStr;
 
 use axum::{
@@ -29,6 +29,8 @@ use redacted::FullyRedacted;
 
 type CoreClientFromDiscovery = CoreClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointMaybeSet, EndpointMaybeSet>;
 
+pub trait OIDCClaims: AdditionalClaims + DeserializeOwned + Serialize + Clone + 'static {}
+impl<T: AdditionalClaims + DeserializeOwned + Serialize + Clone + 'static> OIDCClaims for T {}
 #[derive(Clone, Debug, Deserialize)]
 pub struct OIDCConfig {
     pub issuer_url: Url,
@@ -45,32 +47,81 @@ pub struct AuthConfig {
     pub scopes: Vec<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct OIDCUser {
+#[derive(Clone, Debug, Serialize)]
+pub struct OIDCUser<C: OIDCClaims> {
     pub id: String,
     pub name: Option<String>,
     pub expiration: DateTime<Utc>,
     pub email: Option<email_address::EmailAddress>,
-    pub groups: Vec<String>,
-    pub scopes: Vec<String>,
+    pub additional_claims: C,
     #[serde(skip_serializing)]
     pub refresh_token: Option<RefreshToken>,
 }
-impl OIDCUser {
+impl<C: OIDCClaims> OIDCUser<C> {
     fn from_claims(
-        uic: &UserInfoClaims<GroupClaims, CoreGenderClaim>,
+        uic: &UserInfoClaims<C, CoreGenderClaim>,  // was AdditionalClaims, should be C
         refresh_token: Option<RefreshToken>,
         expiration: DateTime<Utc>,
     ) -> Self {
-        OIDCUser {
+        Self {
             id: uic.standard_claims().subject().as_str().into(),
             name: uic_name_to_name(uic.standard_claims().name()),
             email: uic_email_to_email(uic.standard_claims().email()),
-            groups: uic.additional_claims().groups.clone(),
-            scopes: uic.additional_claims().scopes.clone(),
+            additional_claims: uic.additional_claims().clone(),
             expiration,
             refresh_token,
         }
+    }
+}
+
+// DeserializeOwned conflicts with the derive for Deserialize, add an implementation for it
+// directly
+impl<'de, C: OIDCClaims> Deserialize<'de> for OIDCUser<C> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "snake_case")]
+        enum Field { Id, Name, Expiration, Email, AdditionalClaims, RefreshToken }
+
+        struct OIDCUserVisitor<C: OIDCClaims>(std::marker::PhantomData<C>);
+
+        impl<'de, C: OIDCClaims> serde::de::Visitor<'de> for OIDCUserVisitor<C> {
+            type Value = OIDCUser<C>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("struct OIDCUser")
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                let mut id = None;
+                let mut name = None;
+                let mut expiration = None;
+                let mut email = None;
+                let mut additional_claims = None;
+                let mut refresh_token = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Id => { id = Some(map.next_value()?); }
+                        Field::Name => { name = Some(map.next_value()?); }
+                        Field::Expiration => { expiration = Some(map.next_value()?); }
+                        Field::Email => { email = Some(map.next_value()?); }
+                        Field::AdditionalClaims => { additional_claims = Some(map.next_value()?); }
+                        Field::RefreshToken => { refresh_token = Some(map.next_value()?); }
+                    }
+                }
+
+                Ok(OIDCUser {
+                    id: id.ok_or_else(|| serde::de::Error::missing_field("id"))?,
+                    name: name.unwrap_or(None),
+                    expiration: expiration.ok_or_else(|| serde::de::Error::missing_field("expiration"))?,
+                    email: email.unwrap_or(None),
+                    additional_claims: additional_claims.ok_or_else(|| serde::de::Error::missing_field("additional_claims"))?,
+                    refresh_token: refresh_token.unwrap_or(None),
+                })
+            }
+        }
+
+        deserializer.deserialize_map(OIDCUserVisitor(std::marker::PhantomData))
     }
 }
 fn uic_email_to_email(
@@ -122,9 +173,10 @@ use http::request::Parts;
 const USER_COOKIE_NAME: &str = "oidc_user";
 const REFRESH_COOKIE_NAME: &str = "oidc_user_refresh";
 
-async fn extract_oidc_user_logic<S>(req: &mut Parts, state: &S) -> Result<Option<OIDCUser>, OIDCUserError>
+async fn extract_oidc_user_logic<S, C>(req: &mut Parts, state: &S) -> Result<Option<OIDCUser<C>>, OIDCUserError>
 where
     S: Send + Sync,
+    C: OIDCClaims,
     AuthConfig: FromRef<S>,  // Required to call AuthConfig::from_ref(state)
 {
     if let Ok(cookies) = Cookies::from_request_parts(req, state).await {
@@ -133,7 +185,7 @@ where
 
         match private_cookies.get(USER_COOKIE_NAME) {
             Some(c) => {
-                let oidc_user: Result<OIDCUser, _> = serde_json::from_str(&c.value());
+                let oidc_user: Result<OIDCUser<C>, _> = serde_json::from_str(&c.value());
                 match oidc_user {
                     Err(e) => {
                         tracing::error!("User Cookie problem {:?}", e);
@@ -149,7 +201,7 @@ where
                         let client = construct_client(extracted_state).await?;
                         match serde_json::from_str(&refresh_c.value()) {
                             Ok(refresh_cookie_val) => {
-                                let me = refresh(client, refresh_cookie_val).await;
+                                let me = refresh::<C>(client, refresh_cookie_val).await;
                                 if let Ok(oidcuser) = me {
                                     save_user_to_cookies(&oidcuser, &private_cookies);
                                     return Ok(Some(oidcuser));
@@ -169,24 +221,26 @@ where
     }
 }
 
-impl<S> FromRequestParts<S> for OIDCUser
+impl<S, C> FromRequestParts<S> for OIDCUser<C>
 where
     S: Send + Sync,
+    C: OIDCClaims,
     AuthConfig: FromRef<S>,
 {
     type Rejection = OIDCUserError;
 
     async fn from_request_parts(req: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        match extract_oidc_user_logic::<S>(req, state).await? {
+        match extract_oidc_user_logic::<S, C>(req, state).await? {
             Some(user) => Ok(user),
             None => Err(OIDCUserError::MissingCookie),
         }
     }
 }
 
-impl<S> OptionalFromRequestParts<S> for OIDCUser
+impl<S, C> OptionalFromRequestParts<S> for OIDCUser<C>
 where
     S: Send + Sync,
+    C: OIDCClaims,
     AuthConfig: FromRef<S>,
 {
     type Rejection = OIDCUserError;
@@ -195,7 +249,7 @@ where
         req: &mut Parts,
         state: &S,
     ) -> Result<Option<Self>, Self::Rejection> {
-        extract_oidc_user_logic::<S>(req, state).await
+        extract_oidc_user_logic::<S, C>(req, state).await
     }
 }
 
@@ -212,12 +266,12 @@ pub struct AuthVerify {
     pub csrf_token: CsrfToken,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct GroupClaims {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GroupClaims {
     #[serde(default)]
-    scopes: Vec<String>,
+    pub scopes: Vec<String>,
     #[serde(default)]
-    groups: Vec<String>,
+    pub groups: Vec<String>,
 }
 
 impl AdditionalClaims for GroupClaims {}
@@ -283,7 +337,10 @@ pub async fn get_auth_url(config: &AuthConfig, client: CoreClientFromDiscovery) 
     return ac;
 }
 #[tracing::instrument(skip_all)]
-async fn refresh(client: CoreClientFromDiscovery, refresh_token: RefreshToken) -> anyhow::Result<OIDCUser> {
+async fn refresh<C: OIDCClaims>(
+    client: CoreClientFromDiscovery,
+    refresh_token: RefreshToken,
+) -> anyhow::Result<OIDCUser<C>> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -302,7 +359,7 @@ async fn refresh(client: CoreClientFromDiscovery, refresh_token: RefreshToken) -
     if let Some(expires_in) = token_response.expires_in() {
         let expires_at = chrono::Utc::now() + expires_in;
 
-        let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
+        let userinfo_claims: UserInfoClaims<C, CoreGenderClaim> = client
             .user_info(token_response.access_token().to_owned(), None)
             .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
             .request_async(&async_http_client)
@@ -326,11 +383,11 @@ async fn refresh(client: CoreClientFromDiscovery, refresh_token: RefreshToken) -
 }
 
 #[tracing::instrument(skip_all)]
-pub async fn next(
+pub async fn next<C: OIDCClaims>(
     client: CoreClientFromDiscovery,
     auth_verify: AuthVerify,
     auth_code: String,
-) -> anyhow::Result<OIDCUser> {
+) -> anyhow::Result<OIDCUser<C>> {
     // Once the user has been redirected to the redirect URL, you'll have access to the
     // authorization code. For security reasons, your code should verify that the `state`
     // parameter returned by the server matches `csrf_state`.
@@ -375,7 +432,7 @@ pub async fn next(
     // claims, use UserInfoClaims directly (with the desired type parameters) rather than using the
     // CoreUserInfoClaims type alias.
     let maybe_refresh_token = token_response.refresh_token();
-    let userinfo_claims: UserInfoClaims<GroupClaims, CoreGenderClaim> = client
+    let userinfo_claims: UserInfoClaims<C, CoreGenderClaim> = client
         .user_info(token_response.access_token().to_owned(), None)
         .map_err(|err| anyhow!("No user info endpoint: {:?}", err))?
         .request_async(&async_http_client)
@@ -391,13 +448,18 @@ pub async fn next(
 }
 
 pub fn router(auth_config: AuthConfig) -> axum::Router<AuthConfig> {
+    router_with_claims::<GroupClaims>(auth_config)
+}
+
+pub fn router_with_claims<C: OIDCClaims + 'static>(auth_config: AuthConfig) -> axum::Router<AuthConfig>{
     let keyval = Key::try_from(auth_config.oidc_config.key.into_inner().as_bytes())
         .expect("Key must be >=64 bytes");
     KEY.set(keyval).ok();
     let r = Router::new()
         .route("/login", get(oidc_login))
-        .route("/login_auth", get(login_auth));
+        .route("/login_auth", get(login_auth::<C>));
     r
+
 }
 const COOKIE_NAME: &str = "auth_flow";
 #[tracing::instrument(skip_all)]
@@ -450,7 +512,7 @@ use once_cell::sync::OnceCell;
 static KEY: OnceCell<Key> = OnceCell::new();
 
 #[tracing::instrument(skip_all)]
-async fn login_auth(
+async fn login_auth<C: OIDCClaims + 'static>(
     State(config): State<AuthConfig>,
     cookies: Cookies,
     Query(oidc_auth_code): Query<OIDCAuthCode>,
@@ -460,7 +522,10 @@ async fn login_auth(
     let private_cookies = cookies.private(key);
     let cookie = match private_cookies.get(COOKIE_NAME) {
         Some(c) => c,
-        _ => return Ok(StatusCode::UNAUTHORIZED.into_response()),
+        _ => return {
+            tracing::info!(cookie_name= COOKIE_NAME, "Could not get cookie");
+            Ok(StatusCode::UNAUTHORIZED.into_response())
+        }
     };
 
     let cookie_str = cookie.value();
@@ -471,13 +536,13 @@ async fn login_auth(
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
 
-    let oidc_user = next(auth_client, auth_verify, oidc_auth_code.code).await?;
+    let oidc_user: OIDCUser<C> = next::<C>(auth_client, auth_verify, oidc_auth_code.code).await?;
     save_user_to_cookies(&oidc_user, &private_cookies);
 
     Ok(Redirect::to(&config.post_auth_path).into_response())
 }
 
-fn save_user_to_cookies(user: &OIDCUser, jar: &tower_cookies::PrivateCookies) {
+fn save_user_to_cookies<C: OIDCClaims>(user: &OIDCUser<C>, jar: &tower_cookies::PrivateCookies) {
     let cookie_val_user = serde_json::to_string(&user).unwrap();
     let mut user_cookie = Cookie::new(USER_COOKIE_NAME, cookie_val_user);
     let max_age = user.expiration - chrono::Utc::now();

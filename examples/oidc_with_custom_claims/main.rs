@@ -5,24 +5,32 @@ use axum::{
 };
 use clap::Parser;
 use maud::{html, DOCTYPE};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::net::SocketAddr;
 
 use tower_cookies::CookieManagerLayer;
-use service_conventions::oidc::GroupClaims;
+use service_conventions::oidc::GroupClaims; // needs to be pub
 
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(short, long, default_value = "127.0.0.1:3000")]
     bind_addr: String,
-    #[arg(short, long, default_value = "examples/hello_idc/oidc.toml")]
+    #[arg(short, long, default_value = "examples/oidc_with_custom_claims/oidc.toml")]
     config_file: String,
     #[arg(short, long, value_enum, default_value = "INFO")]
     log_level: tracing::Level,
     #[arg(long, action)]
     log_json: bool,
 }
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CustomClaims {
+    datahub_postgres_role: Vec<String>,
+}
+use openidconnect::AdditionalClaims;
+impl AdditionalClaims for CustomClaims {}
+
 
 #[derive(Clone, Debug, Deserialize)]
 struct AppConfig {
@@ -68,15 +76,11 @@ fn make_app(args: &Args) -> Router {
         toml::from_str(&config_file_contents).expect("Problems parsing config file");
     let app_state: AppState = app_config.into();
 
-    let oidc_router = service_conventions::oidc::router(app_state.auth.clone());
+    let oidc_router = service_conventions::oidc::router_with_claims::<CustomClaims>(app_state.auth.clone());
     Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
         .route("/user", get(user_handler))
-        .route(
-            "/reqwest_with_trace_headers",
-            get(reqwest_with_trace_headers),
-        )
         .nest("/oidc", oidc_router)
         .with_state(app_state.auth.clone())
         .layer(CookieManagerLayer::new())
@@ -97,25 +101,8 @@ async fn health() -> Response {
     "OK".into_response()
 }
 
-async fn reqwest_with_trace_headers() -> Response {
-    let tracing_headers = service_conventions::tracing_http::get_tracing_headers();
-    let client = reqwest::Client::new();
-
-    let _ = client
-        .get("http://example.com")
-        .headers(tracing_headers)
-        .header("user-agent", "hello_idc_test")
-        .send()
-        .await
-        .expect("Works");
-    html! {
-       (DOCTYPE)
-            p { "Welcome!"}
-    }
-    .into_response()
-}
-
-async fn user_handler(user: Option<service_conventions::oidc::OIDCUser<GroupClaims>>) -> Response {
+async fn user_handler(user: Option<service_conventions::oidc::OIDCUser<CustomClaims>>) -> Response {
+    tracing::info!(user=?user, "User received");
     if let Some(user) = user {
         html! {
          (DOCTYPE)
@@ -126,16 +113,10 @@ async fn user_handler(user: Option<service_conventions::oidc::OIDCUser<GroupClai
               @if let Some(email) = user.email {
                   p{ ( email ) }
               }
-              h3 { "scopes" }
+              h3 { "custom_claim" }
               ul {
-                @for scope in &user.additional_claims.scopes {
-                    li { (scope) }
-                }
-              }
-              h3 { "groups" }
-              ul {
-                @for group in &user.additional_claims.groups {
-                    li { (group) }
+                @for role in &user.additional_claims.datahub_postgres_role {
+                    li { (role) }
                 }
               }
 

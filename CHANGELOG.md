@@ -37,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.39](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.38...v0.0.39) - 2026-05-28
+
+### Added
+
+- oidc: Specify custom claims
+
+### Other
+
+- Merge remote-tracking branch 'origin/renovate/tracing-opentelemetry-0.x'
+- Merge remote-tracking branch 'origin/renovate/opentelemetry-rust-monorepo'
+- *(deps)* update actions/checkout digest to 900f221
+- Expand jwt example for checking authorization of JWT
+
 ## [0.0.38](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.37...v0.0.38) - 2026-04-29
 
 ### Added

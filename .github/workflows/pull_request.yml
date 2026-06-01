@@ -18,6 +18,6 @@ jobs:
   flake:
     runs-on: nixos-runner
     steps:
-      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 #main
+      - uses: actions/checkout@1cce3390c2bfda521930d01229c073c7ff920824 #main
       - name: Test and Build
         uses: philipcristiano/actions/nix-rust-test-and-build@535a1cda5d945641884694f662e4c4ae3f6aab8c # main

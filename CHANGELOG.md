@@ -37,6 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.40](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.39...v0.0.40) - 2026-06-15
+
+### Fixed
+
+- *(deps)* update rust crate tower-http to 0.7.0
+
+### Other
+
+- *(deps)* update actions/checkout digest to df4cb1c
+
 ## [0.0.39](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.38...v0.0.39) - 2026-05-28
 
 ### Added

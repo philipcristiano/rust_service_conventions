@@ -12,7 +12,7 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # main
         with:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
@@ -37,6 +37,6 @@ jobs:
   flake:
     runs-on: nixos-runner
     steps:
-      - uses: actions/checkout@e8d4307400f9427dba7cb98e488d6ab85f1cec5f # main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # main
       - name: Test and Build
         uses: philipcristiano/actions/nix-rust-test-and-build@535a1cda5d945641884694f662e4c4ae3f6aab8c #main

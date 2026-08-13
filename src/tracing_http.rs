@@ -67,7 +67,6 @@ impl OnRequest {
     }
 }
 
-use opentelemetry::trace::TraceContextExt;
 use opentelemetry_http::HeaderExtractor;
 
 impl<B> tower_http::trace::OnRequest<B> for OnRequest {
@@ -78,6 +77,12 @@ impl<B> tower_http::trace::OnRequest<B> for OnRequest {
         let parent_context = global::get_text_map_propagator(|propagator| {
             propagator.extract(&HeaderExtractor(request.headers()))
         });
-        s.set_parent(parent_context);
+        let r = s.set_parent(parent_context);
+        if let Err(e) = r {
+            tracing::error! (
+                error=?e,
+                "Error setting trace parent"
+            )
+        }
     }
 }

@@ -67,22 +67,17 @@ impl OnRequest {
     }
 }
 
+use opentelemetry::trace::TraceContextExt;
+use opentelemetry_http::HeaderExtractor;
+
 impl<B> tower_http::trace::OnRequest<B> for OnRequest {
     fn on_request(&mut self, request: &http::request::Request<B>, s: &tracing::Span) {
         use tracing_opentelemetry::OpenTelemetrySpanExt;
-        let axum_headers = request.headers();
-        let maybe_traceparent = axum_headers.get("traceparent");
         let name = format!("{} {}", request.method(), request.uri().path());
         s.record("otel.name", name.clone());
-        if let Some(traceparent) = maybe_traceparent {
-            let mut hm = std::collections::HashMap::new();
-            hm.insert(
-                "traceparent".to_string(),
-                traceparent.to_str().unwrap().to_string(),
-            );
-            let parent_context =
-                global::get_text_map_propagator(|propagator| propagator.extract(&hm));
-            s.set_parent(parent_context.clone());
-        }
+        let parent_context = global::get_text_map_propagator(|propagator| {
+            propagator.extract(&HeaderExtractor(request.headers()))
+        });
+        s.set_parent(parent_context);
     }
 }

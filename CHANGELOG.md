@@ -37,6 +37,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.41](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.40...v0.0.41) - 2026-08-13
+
+### Fixed
+
+- *(otel)* Log error if set_parent fails
+- Use otel-http to header extraction
+
+### Other
+
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* update actions/checkout digest to f548e57
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+- *(deps)* update actions/checkout digest to 3d3c42e
+- *(deps)* update actions/checkout digest to e8d4307
+
 ## [0.0.40](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.39...v0.0.40) - 2026-06-15
 
 ### Fixed

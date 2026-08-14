@@ -47,17 +47,36 @@ impl MakeSpan {
 
 impl<B> tower_http::trace::MakeSpan<B> for MakeSpan {
     fn make_span(&mut self, request: &http::Request<B>) -> tracing::Span {
-        tracing::span!(
+        use opentelemetry::global;
+        use opentelemetry_http::HeaderExtractor;
+        use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+        let parent_context = global::get_text_map_propagator(|propagator| {
+            propagator.extract(&HeaderExtractor(request.headers()))
+        });
+
+        let name = format!("{} {}", request.method(), request.uri().path());
+
+        let span = tracing::span!(
             tracing::Level::INFO,
             "request",
             method = %request.method(),
             uri = %request.uri(),
             version = ?request.version(),
-            "otel.name" = tracing::field::Empty,
+            "otel.name" = %name,
+        );
 
-        )
+        let r = span.set_parent(parent_context);
+        if let Err(e) = r {
+            tracing::error! (
+                error=?e,
+                "Error setting trace parent"
+            )
+        }
+        span
     }
 }
+
 #[derive(Clone, Debug)]
 pub struct OnRequest {}
 
@@ -67,22 +86,8 @@ impl OnRequest {
     }
 }
 
-use opentelemetry_http::HeaderExtractor;
-
 impl<B> tower_http::trace::OnRequest<B> for OnRequest {
-    fn on_request(&mut self, request: &http::request::Request<B>, s: &tracing::Span) {
-        use tracing_opentelemetry::OpenTelemetrySpanExt;
-        let name = format!("{} {}", request.method(), request.uri().path());
-        s.record("otel.name", name.clone());
-        let parent_context = global::get_text_map_propagator(|propagator| {
-            propagator.extract(&HeaderExtractor(request.headers()))
-        });
-        let r = s.set_parent(parent_context);
-        if let Err(e) = r {
-            tracing::error! (
-                error=?e,
-                "Error setting trace parent"
-            )
-        }
+    fn on_request(&mut self, _request: &http::request::Request<B>, _s: &tracing::Span) {
+        // no-op for now
     }
 }

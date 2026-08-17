@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.43](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.42...v0.0.43) - 2026-08-17
+
+### Other
+
+- *(deps)* lock file maintenance
+- *(deps)* lock file maintenance
+
 ## [0.0.42](https://forgejo.home.cristiano.cloud/philipcristiano/rust_service_conventions/compare/v0.0.41...v0.0.42) - 2026-08-14
 
 ### Fixed
